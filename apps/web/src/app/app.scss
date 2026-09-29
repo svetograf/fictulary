@@ -1,0 +1,16 @@
+mat-toolbar {
+  gap: 12px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+h1 {
+  font: var(--mat-sys-title-large);
+  margin: 0;
+}
+
+main {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
+}

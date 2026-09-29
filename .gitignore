@@ -48,3 +48,10 @@ Thumbs.db
 .nx/polygraph
 .nx/self-healing
 .nx/migrate-runs
+.angular
+
+__screenshots__/
+
+# env
+.env
+!.env.example
