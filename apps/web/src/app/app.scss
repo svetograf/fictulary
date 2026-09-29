@@ -14,3 +14,13 @@ main {
   margin: 24px auto;
   padding: 0 16px;
 }
+
+nav {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+nav a.active {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}

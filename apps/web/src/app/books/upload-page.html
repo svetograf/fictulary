@@ -1,0 +1,186 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Upload a book</mat-card-title>
+    <mat-card-subtitle>
+      We count every word in the text; the text itself is not stored.
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="submit()" class="upload-form">
+      <div
+        class="drop-zone"
+        role="button"
+        tabindex="0"
+        aria-label="Choose a .txt file or drop it here"
+        [class.dragging]="dragging()"
+        [class.invalid]="controls.file.invalid && controls.file.touched"
+        [class.disabled]="form.disabled"
+        (click)="fileInput.click()"
+        (keydown.enter)="fileInput.click()"
+        (keydown.space)="$event.preventDefault(); fileInput.click()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="dragging.set(false)"
+        (drop)="onDrop($event)"
+      >
+        <input
+          #fileInput
+          type="file"
+          accept=".txt,text/plain"
+          hidden
+          [disabled]="form.disabled"
+          (change)="onFileInput($event)"
+        />
+        @if (controls.file.value; as selected) {
+          <mat-icon>description</mat-icon>
+          <span class="file-name">{{ selected.name }}</span>
+          <span class="file-size"
+            >{{ selected.size / 1024 | number: '1.0-1' }} KB</span
+          >
+          <button
+            mat-icon-button
+            type="button"
+            aria-label="Remove file"
+            [disabled]="form.disabled"
+            (click)="$event.stopPropagation(); clearFile()"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        } @else {
+          <mat-icon>upload_file</mat-icon>
+          <span>Drop a .txt file here or <strong>browse</strong></span>
+          <span class="file-size">Up to {{ limits.fileSizeMb }} MB</span>
+        }
+      </div>
+      @if (controls.file.touched) {
+        @if (controls.file.hasError('required')) {
+          <mat-error>Please choose a file.</mat-error>
+        } @else if (controls.file.hasError('fileExtension')) {
+          <mat-error>Only .txt files are supported.</mat-error>
+        } @else if (controls.file.hasError('maxFileSize')) {
+          <mat-error
+            >File must be {{ limits.fileSizeMb }} MB or smaller.</mat-error
+          >
+        }
+      }
+      <mat-form-field>
+        <mat-label>Book name</mat-label>
+        <input matInput formControlName="name" required />
+        <mat-hint align="end"
+          >{{ controls.name.value.length }} / {{ limits.name }}</mat-hint
+        >
+        @if (controls.name.hasError('required')) {
+          <mat-error>Book name is required.</mat-error>
+        } @else if (controls.name.hasError('maxlength')) {
+          <mat-error
+            >Book name must be at most {{ limits.name }} characters.</mat-error
+          >
+        }
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Description (optional)</mat-label>
+        <textarea matInput formControlName="description" rows="3"></textarea>
+        <mat-hint align="end">
+          {{ controls.description.value.length }} / {{ limits.description }}
+        </mat-hint>
+        @if (controls.description.hasError('maxlength')) {
+          <mat-error>
+            Description must be at most {{ limits.description }} characters.
+          </mat-error>
+        }
+      </mat-form-field>
+
+      <div class="status">
+        <span id="status-label" class="status-label">Status</span>
+        <mat-button-toggle-group
+          formControlName="status"
+          aria-labelledby="status-label"
+        >
+          @for (status of statuses; track status) {
+            <mat-button-toggle [value]="status">
+              {{ statusLabels[status] }}
+            </mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+      </div>
+
+      <div class="actions">
+        <button mat-flat-button type="submit" [disabled]="uploading()">
+          <mat-icon>cloud_upload</mat-icon>
+          Upload
+        </button>
+        @if (uploading()) {
+          <div class="progress" role="status">
+            @if (progress(); as percent) {
+              <mat-progress-spinner
+                mode="determinate"
+                [value]="percent"
+                diameter="32"
+              />
+              <span>Uploading… {{ percent }}%</span>
+            } @else {
+              <mat-progress-spinner mode="indeterminate" diameter="32" />
+              <span>{{
+                progress() === null ? 'Counting words…' : 'Uploading…'
+              }}</span>
+            }
+          </div>
+        }
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
+
+@if (error(); as message) {
+  <p class="error" role="alert"><mat-icon>error</mat-icon> {{ message }}</p>
+}
+@if (book(); as result) {
+  <mat-card appearance="outlined" class="result">
+    <mat-card-header>
+      <mat-card-title>{{ result.name }}</mat-card-title>
+      <mat-card-subtitle>{{ statusLabels[result.status] }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (result.description) {
+        <p class="description">{{ result.description }}</p>
+      }
+      <dl class="stats">
+        <div>
+          <dt>Words</dt>
+          <dd>{{ result.wordCount | number }}</dd>
+        </div>
+        <div>
+          <dt>Distinct words</dt>
+          <dd>{{ result.uniqueWordCount | number }}</dd>
+        </div>
+      </dl>
+
+      <h3>Top {{ result.words.length }} words</h3>
+      <table mat-table [dataSource]="result.words" class="words">
+        <ng-container matColumnDef="rank">
+          <th mat-header-cell *matHeaderCellDef>#</th>
+          <td mat-cell *matCellDef="let row; let i = index">{{ i + 1 }}</td>
+        </ng-container>
+        <ng-container matColumnDef="word">
+          <th mat-header-cell *matHeaderCellDef>Word</th>
+          <td mat-cell *matCellDef="let row">{{ row.word }}</td>
+        </ng-container>
+        <ng-container matColumnDef="count">
+          <th mat-header-cell *matHeaderCellDef>Count</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="count">
+              <span
+                class="bar"
+                [style.width.%]="(row.count / maxWordCount()) * 100"
+              ></span>
+              <span>{{ row.count | number }}</span>
+            </div>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="wordColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: wordColumns"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+}

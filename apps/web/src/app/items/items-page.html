@@ -1,5 +1,5 @@
 @if (loading()) {
-<mat-progress-bar mode="indeterminate" />
+  <mat-progress-bar mode="indeterminate" />
 }
 
 <mat-card appearance="outlined">
@@ -25,27 +25,29 @@
 </mat-card>
 
 @if (error(); as message) {
-<p class="error"><mat-icon>error</mat-icon> {{ message }}</p>
+  <p class="error"><mat-icon>error</mat-icon> {{ message }}</p>
 }
 
 <mat-list>
   @for (item of items(); track item.id) {
-  <mat-list-item>
-    <mat-icon matListItemIcon>description</mat-icon>
-    <span matListItemTitle>{{ item.name }}</span>
-    @if (item.description) {
-    <span matListItemLine>{{ item.description }}</span>
+    <mat-list-item>
+      <mat-icon matListItemIcon>description</mat-icon>
+      <span matListItemTitle>{{ item.name }}</span>
+      @if (item.description) {
+        <span matListItemLine>{{ item.description }}</span>
+      }
+      <button
+        mat-icon-button
+        matListItemMeta
+        aria-label="Delete item"
+        (click)="removeItem(item.id)"
+      >
+        <mat-icon>delete</mat-icon>
+      </button>
+    </mat-list-item>
+  } @empty {
+    @if (!loading()) {
+      <p class="empty">No items yet.</p>
     }
-    <button
-      mat-icon-button
-      matListItemMeta
-      aria-label="Delete item"
-      (click)="removeItem(item.id)"
-    >
-      <mat-icon>delete</mat-icon>
-    </button>
-  </mat-list-item>
-  } @empty { @if (!loading()) {
-  <p class="empty">No items yet.</p>
-  } }
+  }
 </mat-list>

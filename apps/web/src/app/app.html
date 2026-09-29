@@ -1,6 +1,19 @@
 <mat-toolbar>
   <mat-icon>auto_stories</mat-icon>
   <h1>{{ title }}</h1>
+  <nav>
+    <a
+      mat-button
+      routerLink="/"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      >Items</a
+    >
+    <a mat-button routerLink="/upload" routerLinkActive="active">
+      <mat-icon>upload_file</mat-icon>
+      Upload
+    </a>
+  </nav>
 </mat-toolbar>
 
 <main>

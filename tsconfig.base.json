@@ -13,7 +13,9 @@
     "lib": ["es2022", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "paths": {}
+    "paths": {
+      "@fictulary/shared/models": ["./libs/shared/models/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }

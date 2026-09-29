@@ -8,6 +8,7 @@ import { provideRouter } from '@angular/router';
 import { withNgxsReduxDevtoolsPlugin } from '@ngxs/devtools-plugin';
 import { provideStore, withNgxsDevelopmentOptions } from '@ngxs/store';
 import { appRoutes } from './app.routes';
+import { BooksState } from './books/books.state';
 import { ItemsState } from './items/items.state';
 
 export const appConfig: ApplicationConfig = {
@@ -16,7 +17,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(appRoutes),
     provideHttpClient(withFetch()),
     provideStore(
-      [ItemsState],
+      [ItemsState, BooksState],
       withNgxsDevelopmentOptions({
         warnOnUnhandledActions: true,
       }),
