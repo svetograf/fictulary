@@ -9,8 +9,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager, In } from 'typeorm';
 import { CreateBookDto } from './dto/create-book.dto';
+import { BookWord } from './entities/book-word.entity';
 import { Book } from './entities/book.entity';
 import { Word } from './entities/word.entity';
 import { countWords } from './text/count-words';
@@ -28,11 +29,11 @@ export class BooksService {
         order: { createdAt: 'DESC', id: 'DESC' },
       }),
       this.dataSource
-        .getRepository(Word)
-        .createQueryBuilder('word')
-        .select('word.bookId', 'bookId')
+        .getRepository(BookWord)
+        .createQueryBuilder('bookWord')
+        .select('bookWord.bookId', 'bookId')
         .addSelect('COUNT(*)', 'count')
-        .groupBy('word.bookId')
+        .groupBy('bookWord.bookId')
         .getRawMany<{ bookId: number; count: string }>(),
     ]);
 
@@ -50,20 +51,25 @@ export class BooksService {
       throw new NotFoundException(`Book ${id} not found`);
     }
 
-    const words = this.dataSource.getRepository(Word);
+    const bookWords = this.dataSource.getRepository(BookWord);
     const [top, uniqueWordCount] = await Promise.all([
-      words.find({
-        select: { word: true, count: true },
-        where: { bookId: id },
-        order: { count: 'DESC', word: 'ASC' },
-        take: BOOK_TOP_WORDS_LIMIT,
-      }),
-      words.countBy({ bookId: id }),
+      bookWords
+        .createQueryBuilder('bookWord')
+        .innerJoin('bookWord.word', 'word')
+        .select('word.word', 'word')
+        .addSelect('bookWord.count', 'count')
+        .where('bookWord.bookId = :id', { id })
+        .orderBy('bookWord.count', 'DESC')
+        .addOrderBy('word.word', 'ASC')
+        .limit(BOOK_TOP_WORDS_LIMIT)
+        .getRawMany<{ word: string; count: string }>(),
+      bookWords.countBy({ bookId: id }),
     ]);
 
     return {
       ...toSummary(book, uniqueWordCount),
-      words: top.map(({ word, count }) => ({ word, count })),
+      // Raw rows skip the entity transformer, so bigint counts are strings.
+      words: top.map(({ word, count }) => ({ word, count: Number(count) })),
     };
   }
 
@@ -83,14 +89,7 @@ export class BooksService {
         }),
       );
 
-      const rows = Array.from(counts, ([word, count]) => ({
-        word,
-        count,
-        bookId: saved.id,
-      }));
-      for (let i = 0; i < rows.length; i += WORD_INSERT_CHUNK_SIZE) {
-        await manager.insert(Word, rows.slice(i, i + WORD_INSERT_CHUNK_SIZE));
-      }
+      await saveWordCounts(manager, saved.id, counts);
       return saved;
     });
 
@@ -98,6 +97,43 @@ export class BooksService {
       ...toSummary(book, counts.size),
       words: topWords(counts, BOOK_TOP_WORDS_LIMIT),
     };
+  }
+}
+
+/**
+ * Adds any new words to the shared dictionary, then links them to the book
+ * with their counts.
+ */
+async function saveWordCounts(
+  manager: EntityManager,
+  bookId: number,
+  counts: Map<string, number>,
+): Promise<void> {
+  const words = [...counts.keys()];
+  for (let i = 0; i < words.length; i += WORD_INSERT_CHUNK_SIZE) {
+    const chunk = words.slice(i, i + WORD_INSERT_CHUNK_SIZE);
+    // ON CONFLICT DO NOTHING: words already in the dictionary (possibly added
+    // by a concurrent upload) are reused below.
+    await manager
+      .createQueryBuilder()
+      .insert()
+      .into(Word)
+      .values(chunk.map((word) => ({ word })))
+      .orIgnore()
+      .execute();
+
+    const entries = await manager.find(Word, {
+      select: { id: true, word: true },
+      where: { word: In(chunk) },
+    });
+    await manager.insert(
+      BookWord,
+      entries.map(({ id, word }) => ({
+        bookId,
+        wordId: id,
+        count: counts.get(word) ?? 0,
+      })),
+    );
   }
 }
 

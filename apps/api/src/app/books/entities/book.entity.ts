@@ -11,7 +11,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { bigintTransformer } from '../../common/bigint.transformer';
-import { Word } from './word.entity';
+import { BookWord } from './book-word.entity';
 
 @Entity('books')
 export class Book {
@@ -37,6 +37,7 @@ export class Book {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-  @OneToMany(() => Word, (word) => word.book)
-  words!: Word[];
+  /** Words in this book with their counts (many-to-many via book_words). */
+  @OneToMany(() => BookWord, (bookWord) => bookWord.book)
+  bookWords!: BookWord[];
 }
