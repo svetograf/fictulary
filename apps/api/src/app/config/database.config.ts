@@ -4,6 +4,7 @@ import { BookWord } from '../books/entities/book-word.entity';
 import { Book } from '../books/entities/book.entity';
 import { Word } from '../books/entities/word.entity';
 import { migrations } from '../../migrations';
+import { User } from '../users/user.entity';
 
 /**
  * Connection settings shared by the Nest app and the TypeORM CLI
@@ -19,7 +20,7 @@ export function dataSourceOptions(): PostgresOptions {
     username: process.env.DB_USER ?? 'fictulary',
     password: process.env.DB_PASSWORD ?? 'fictulary',
     database: process.env.DB_NAME ?? 'fictulary',
-    entities: [Book, Word, BookWord],
+    entities: [Book, Word, BookWord, User],
     migrations,
     // The schema is managed by migrations; never let TypeORM alter it.
     synchronize: false,

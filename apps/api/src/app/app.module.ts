@@ -3,6 +3,8 @@ import { ConfigModule, ConfigType } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { authConfig } from './config/auth.config';
 import { databaseConfig } from './config/database.config';
 import { BooksModule } from './books/books.module';
 
@@ -11,13 +13,14 @@ import { BooksModule } from './books/books.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['apps/api/.env', '.env'],
-      load: [databaseConfig],
+      load: [databaseConfig, authConfig],
     }),
     TypeOrmModule.forRootAsync({
       inject: [databaseConfig.KEY],
       useFactory: (config: ConfigType<typeof databaseConfig>) => config,
     }),
     BooksModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

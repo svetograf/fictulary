@@ -2,6 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { BookStatus, BookSummary } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
+import { SignInSuccess, SignOut } from '../auth/auth.actions';
+import { AuthState } from '../auth/auth.state';
+import { authResponse } from '../auth/testing';
 import { LoadBooksFail, LoadBooksSuccess } from './books.actions';
 import { BookListPage } from './book-list-page';
 import { BooksService } from './books.service';
@@ -20,7 +23,10 @@ const book: BookSummary = {
 describe('BookListPage', () => {
   const booksService = { loadBooks: vi.fn() };
 
-  const render = async () => {
+  const render = async ({ signedIn = true } = {}) => {
+    if (signedIn) {
+      TestBed.inject(Store).dispatch(new SignInSuccess(authResponse()));
+    }
     const fixture = TestBed.createComponent(BookListPage);
     await fixture.whenStable();
     return fixture;
@@ -28,19 +34,42 @@ describe('BookListPage', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks();
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [BookListPage],
       providers: [
         provideRouter([]),
-        provideStore([BooksState]),
+        provideStore([AuthState, BooksState]),
         { provide: BooksService, useValue: booksService },
       ],
     }).compileComponents();
   });
 
-  it('loads the books on init', async () => {
+  it('loads the books when signed in', async () => {
     await render();
     expect(booksService.loadBooks).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks guests to sign in instead of loading books', async () => {
+    const fixture = await render({ signedIn: false });
+    expect(booksService.loadBooks).not.toHaveBeenCalled();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.textContent).toContain('Sign in to see your books');
+    expect(
+      element.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
+    ).toBe('Sign in');
+    expect(element.querySelector('a[mat-list-item]')).toBeNull();
+  });
+
+  it('switches to the guest view on sign-out', async () => {
+    const fixture = await render();
+    TestBed.inject(Store).dispatch(new LoadBooksSuccess([book]));
+    TestBed.inject(Store).dispatch(new SignOut());
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Sign in to see your books',
+    );
+    expect(fixture.nativeElement.querySelector('a[mat-list-item]')).toBeNull();
   });
 
   it('links each book to its page', async () => {

@@ -8,6 +8,8 @@ import { BookDetails, BookSummary } from '@fictulary/shared/models';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
 import { patch } from '@ngxs/store/operators';
 import { catchError, map, mergeMap, of } from 'rxjs';
+import { SignOut } from '../auth/auth.actions';
+import { httpErrorMessage } from '../shared/http-error-message';
 import {
   LoadBook,
   LoadBookFail,
@@ -131,7 +133,7 @@ export class BooksState {
     return this.http.get<BookSummary[]>('/api/books').pipe(
       mergeMap((books) => ctx.dispatch(new LoadBooksSuccess(books))),
       catchError((error: HttpErrorResponse) =>
-        ctx.dispatch(new LoadBooksFail(errorMessage(error))),
+        ctx.dispatch(new LoadBooksFail(httpErrorMessage(error))),
       ),
     );
   }
@@ -155,7 +157,7 @@ export class BooksState {
     return this.http.get<BookDetails>(`/api/book/${id}`).pipe(
       mergeMap((book) => ctx.dispatch(new LoadBookSuccess(book))),
       catchError((error: HttpErrorResponse) =>
-        ctx.dispatch(new LoadBookFail(errorMessage(error))),
+        ctx.dispatch(new LoadBookFail(httpErrorMessage(error))),
       ),
     );
   }
@@ -201,7 +203,7 @@ export class BooksState {
           return of(undefined);
         }),
         catchError((error: HttpErrorResponse) =>
-          ctx.dispatch(new UploadFileFail(errorMessage(error))),
+          ctx.dispatch(new UploadFileFail(httpErrorMessage(error))),
         ),
         map(() => undefined),
       );
@@ -235,6 +237,16 @@ export class BooksState {
     ctx.setState(patch({ upload: { ...initialUpload, error } }));
   }
 
+  /** Another user may sign in next; don't keep this user's books around. */
+  @Action(SignOut)
+  signOut(ctx: Ctx) {
+    ctx.setState({
+      list: initialList,
+      current: initialCurrent,
+      upload: initialUpload,
+    });
+  }
+
   @Action(ResetUpload)
   resetUpload(ctx: Ctx) {
     ctx.setState(patch({ upload: initialUpload }));
@@ -253,15 +265,4 @@ function toSummary(book: BookDetails): BookSummary {
     uniqueWordCount,
     createdAt,
   };
-}
-
-function errorMessage(error: HttpErrorResponse): string {
-  if (error.status === 0) {
-    return 'Could not reach the server. Please try again.';
-  }
-  const message: unknown = error.error?.message;
-  if (Array.isArray(message)) {
-    return message.join('. ');
-  }
-  return typeof message === 'string' ? message : error.message;
 }

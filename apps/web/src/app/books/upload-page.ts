@@ -25,7 +25,8 @@ import { BookDetailsCard } from './book-details-card';
 import { BOOK_STATUS_LABELS } from './book-status';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
-import { fileExtension, maxFileSize, notBlank } from './file-validators';
+import { notBlank } from '../shared/validators';
+import { fileExtension, maxFileSize } from './file-validators';
 
 @Component({
   selector: 'app-upload-page',

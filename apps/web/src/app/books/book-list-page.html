@@ -1,41 +1,54 @@
-<header class="page-header">
-  <h2>Books</h2>
-  <a mat-flat-button routerLink="/upload">
-    <mat-icon>upload_file</mat-icon>
-    Upload a book
-  </a>
-</header>
-
-@if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
-}
-
-@if (error(); as message) {
-  <div class="error" role="alert">
-    <mat-icon>error</mat-icon>
-    <span>{{ message }}</span>
-    <button mat-button (click)="booksService.loadBooks()">Retry</button>
+@if (!signedIn()) {
+  <div class="empty guest">
+    <mat-icon>auto_stories</mat-icon>
+    <h2>Count the words in any book</h2>
+    <p>Sign in to see your books, or create an account to upload one.</p>
+    <div class="guest-actions">
+      <a mat-flat-button routerLink="/sign-in">Sign in</a>
+      <a mat-stroked-button routerLink="/sign-up">Sign up</a>
+    </div>
   </div>
-}
+} @else {
+  <header class="page-header">
+    <h2>Books</h2>
+    <a mat-flat-button routerLink="/upload">
+      <mat-icon>upload_file</mat-icon>
+      Upload a book
+    </a>
+  </header>
 
-@if (books().length) {
-  <mat-nav-list>
-    @for (book of books(); track book.id) {
-      <a mat-list-item [routerLink]="['/book', book.id]">
-        <mat-icon matListItemIcon>{{ statusIcons[book.status] }}</mat-icon>
-        <span matListItemTitle>{{ book.name }}</span>
-        <span matListItemLine>
-          {{ statusLabels[book.status] }} · {{ book.wordCount | number }} words
-          · {{ book.uniqueWordCount | number }} distinct · Added
-          {{ book.createdAt | date: 'mediumDate' }}
-        </span>
-      </a>
-    }
-  </mat-nav-list>
-} @else if (!loading() && !error()) {
-  <div class="empty">
-    <mat-icon>library_books</mat-icon>
-    <p>No books yet. Upload a .txt file to count its words.</p>
-    <a mat-stroked-button routerLink="/upload">Upload a book</a>
-  </div>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (error(); as message) {
+    <div class="error" role="alert">
+      <mat-icon>error</mat-icon>
+      <span>{{ message }}</span>
+      <button mat-button (click)="booksService.loadBooks()">Retry</button>
+    </div>
+  }
+
+  @if (books().length) {
+    <mat-nav-list>
+      @for (book of books(); track book.id) {
+        <a mat-list-item [routerLink]="['/book', book.id]">
+          <mat-icon matListItemIcon>{{ statusIcons[book.status] }}</mat-icon>
+          <span matListItemTitle>{{ book.name }}</span>
+          <span matListItemLine>
+            {{ statusLabels[book.status] }} ·
+            {{ book.wordCount | number }} words ·
+            {{ book.uniqueWordCount | number }} distinct · Added
+            {{ book.createdAt | date: 'mediumDate' }}
+          </span>
+        </a>
+      }
+    </mat-nav-list>
+  } @else if (!loading() && !error()) {
+    <div class="empty">
+      <mat-icon>library_books</mat-icon>
+      <p>No books yet. Upload a .txt file to count its words.</p>
+      <a mat-stroked-button routerLink="/upload">Upload a book</a>
+    </div>
+  }
 }

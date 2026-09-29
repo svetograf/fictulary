@@ -39,3 +39,21 @@
     font-size: 48px;
   }
 }
+
+.guest {
+  h2 {
+    font: var(--mat-sys-headline-small);
+    color: var(--mat-sys-on-surface);
+    margin: 8px 0 0;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.guest-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}

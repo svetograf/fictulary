@@ -8,6 +8,7 @@ import { TestBed } from '@angular/core/testing';
 import { BookDetails, BookStatus, BookSummary } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import { LoadBook, LoadBooks, ResetUpload, UploadFile } from './books.actions';
+import { SignOut } from '../auth/auth.actions';
 import { BooksState } from './books.state';
 
 const summary: BookSummary = {
@@ -218,5 +219,18 @@ describe('BooksState', () => {
       );
       expect(store.selectSnapshot(BooksState.currentBookLoading)).toBe(false);
     });
+  });
+
+  it('forgets all book data on sign-out', () => {
+    store.dispatch(new LoadBooks());
+    http.expectOne('/api/books').flush([summary]);
+    store.dispatch(new LoadBook(1));
+    http.expectOne('/api/book/1').flush(book);
+
+    store.dispatch(new SignOut());
+
+    expect(store.selectSnapshot(BooksState.books)).toEqual([]);
+    expect(store.selectSnapshot(BooksState.currentBook)).toBeNull();
+    expect(store.selectSnapshot(BooksState.uploadedBook)).toBeNull();
   });
 });
