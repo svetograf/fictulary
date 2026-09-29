@@ -4,20 +4,19 @@ import {
   isDevMode,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { withNgxsReduxDevtoolsPlugin } from '@ngxs/devtools-plugin';
 import { provideStore, withNgxsDevelopmentOptions } from '@ngxs/store';
 import { appRoutes } from './app.routes';
 import { BooksState } from './books/books.state';
-import { ItemsState } from './items/items.state';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(appRoutes),
+    provideRouter(appRoutes, withComponentInputBinding()),
     provideHttpClient(withFetch()),
     provideStore(
-      [ItemsState, BooksState],
+      [BooksState],
       withNgxsDevelopmentOptions({
         warnOnUnhandledActions: true,
       }),

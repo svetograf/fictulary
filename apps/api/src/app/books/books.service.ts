@@ -1,9 +1,14 @@
 import {
   BOOK_TOP_WORDS_LIMIT,
-  BookResult,
+  BookDetails,
+  BookSummary,
   WordCount,
 } from '@fictulary/shared/models';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CreateBookDto } from './dto/create-book.dto';
 import { Book } from './entities/book.entity';
@@ -17,7 +22,52 @@ const WORD_INSERT_CHUNK_SIZE = 1000;
 export class BooksService {
   constructor(private readonly dataSource: DataSource) {}
 
-  async create(dto: CreateBookDto, text: string): Promise<BookResult> {
+  async findAll(): Promise<BookSummary[]> {
+    const [books, wordCounts] = await Promise.all([
+      this.dataSource.getRepository(Book).find({
+        order: { createdAt: 'DESC', id: 'DESC' },
+      }),
+      this.dataSource
+        .getRepository(Word)
+        .createQueryBuilder('word')
+        .select('word.bookId', 'bookId')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('word.bookId')
+        .getRawMany<{ bookId: number; count: string }>(),
+    ]);
+
+    const uniqueWordCounts = new Map(
+      wordCounts.map(({ bookId, count }) => [bookId, Number(count)]),
+    );
+    return books.map((book) =>
+      toSummary(book, uniqueWordCounts.get(book.id) ?? 0),
+    );
+  }
+
+  async findOne(id: number): Promise<BookDetails> {
+    const book = await this.dataSource.getRepository(Book).findOneBy({ id });
+    if (!book) {
+      throw new NotFoundException(`Book ${id} not found`);
+    }
+
+    const words = this.dataSource.getRepository(Word);
+    const [top, uniqueWordCount] = await Promise.all([
+      words.find({
+        select: { word: true, count: true },
+        where: { bookId: id },
+        order: { count: 'DESC', word: 'ASC' },
+        take: BOOK_TOP_WORDS_LIMIT,
+      }),
+      words.countBy({ bookId: id }),
+    ]);
+
+    return {
+      ...toSummary(book, uniqueWordCount),
+      words: top.map(({ word, count }) => ({ word, count })),
+    };
+  }
+
+  async create(dto: CreateBookDto, text: string): Promise<BookDetails> {
     const { total, counts } = countWords(text);
     if (total === 0) {
       throw new BadRequestException('File does not contain any words');
@@ -45,15 +95,22 @@ export class BooksService {
     });
 
     return {
-      id: book.id,
-      name: book.name,
-      description: book.description,
-      status: book.status,
-      wordCount: book.wordCount,
-      uniqueWordCount: counts.size,
+      ...toSummary(book, counts.size),
       words: topWords(counts, BOOK_TOP_WORDS_LIMIT),
     };
   }
+}
+
+function toSummary(book: Book, uniqueWordCount: number): BookSummary {
+  return {
+    id: book.id,
+    name: book.name,
+    description: book.description,
+    status: book.status,
+    wordCount: book.wordCount,
+    uniqueWordCount,
+    createdAt: book.createdAt.toISOString(),
+  };
 }
 
 function topWords(counts: Map<string, number>, limit: number): WordCount[] {

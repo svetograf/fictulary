@@ -1,10 +1,39 @@
-import { BookResult, BookStatus } from '@fictulary/shared/models';
+import { BookDetails, BookStatus, BookSummary } from '@fictulary/shared/models';
 
 export interface UploadBookPayload {
   file: File;
   name: string;
   description: string;
   status: BookStatus;
+}
+
+export class LoadBooks {
+  static readonly type = '[Books] LOAD_BOOKS';
+}
+
+export class LoadBooksSuccess {
+  static readonly type = '[Books] LOAD_BOOKS_SUCCESS';
+  constructor(public readonly books: BookSummary[]) {}
+}
+
+export class LoadBooksFail {
+  static readonly type = '[Books] LOAD_BOOKS_FAIL';
+  constructor(public readonly error: string) {}
+}
+
+export class LoadBook {
+  static readonly type = '[Books] LOAD_BOOK';
+  constructor(public readonly id: number) {}
+}
+
+export class LoadBookSuccess {
+  static readonly type = '[Books] LOAD_BOOK_SUCCESS';
+  constructor(public readonly book: BookDetails) {}
+}
+
+export class LoadBookFail {
+  static readonly type = '[Books] LOAD_BOOK_FAIL';
+  constructor(public readonly error: string) {}
 }
 
 export class UploadFile {
@@ -19,7 +48,7 @@ export class UploadFileProgress {
 
 export class UploadFileSuccess {
   static readonly type = '[Books] UPLOAD_FILE_SUCCESS';
-  constructor(public readonly book: BookResult) {}
+  constructor(public readonly book: BookDetails) {}
 }
 
 export class UploadFileFail {

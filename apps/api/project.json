@@ -52,6 +52,45 @@
       "options": {
         "passWithNoTests": true
       }
+    },
+    "migration-generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r ./apps/api/typeorm-cli.register.cjs node_modules/typeorm/cli.js migration:generate -d apps/api/src/data-source.ts --pretty apps/api/src/migrations/{args.name}",
+        "forwardAllArgs": false
+      }
+    },
+    "migration-create": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r ./apps/api/typeorm-cli.register.cjs node_modules/typeorm/cli.js migration:create apps/api/src/migrations/{args.name}",
+        "forwardAllArgs": false
+      }
+    },
+    "migration-run": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r ./apps/api/typeorm-cli.register.cjs node_modules/typeorm/cli.js migration:run -d apps/api/src/data-source.ts"
+      }
+    },
+    "migration-revert": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r ./apps/api/typeorm-cli.register.cjs node_modules/typeorm/cli.js migration:revert -d apps/api/src/data-source.ts"
+      }
+    },
+    "migration-show": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r ./apps/api/typeorm-cli.register.cjs node_modules/typeorm/cli.js migration:show -d apps/api/src/data-source.ts"
+      }
+    },
+    "migration-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r ./apps/api/typeorm-cli.register.cjs node_modules/typeorm/cli.js migration:generate -d apps/api/src/data-source.ts --check apps/api/src/migrations/Pending",
+        "forwardAllArgs": false
+      }
     }
   }
 }

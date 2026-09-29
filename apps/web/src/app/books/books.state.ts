@@ -4,10 +4,17 @@ import {
   HttpEventType,
 } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { BookResult } from '@fictulary/shared/models';
+import { BookDetails, BookSummary } from '@fictulary/shared/models';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
+import { patch } from '@ngxs/store/operators';
 import { catchError, map, mergeMap, of } from 'rxjs';
 import {
+  LoadBook,
+  LoadBookFail,
+  LoadBookSuccess,
+  LoadBooks,
+  LoadBooksFail,
+  LoadBooksSuccess,
   ResetUpload,
   UploadFile,
   UploadFileFail,
@@ -16,48 +23,158 @@ import {
 } from './books.actions';
 
 export interface BooksStateModel {
-  uploading: boolean;
-  /** Upload progress in percent, or null once the file has been sent. */
-  progress: number | null;
-  book: BookResult | null;
-  error: string | null;
+  list: {
+    books: BookSummary[];
+    loading: boolean;
+    error: string | null;
+  };
+  /** The book opened on the book page. */
+  current: {
+    book: BookDetails | null;
+    loading: boolean;
+    error: string | null;
+  };
+  upload: {
+    uploading: boolean;
+    /** Upload progress in percent, or null once the file has been sent. */
+    progress: number | null;
+    book: BookDetails | null;
+    error: string | null;
+  };
 }
 
-const defaults: BooksStateModel = {
+const initialList: BooksStateModel['list'] = {
+  books: [],
+  loading: false,
+  error: null,
+};
+const initialCurrent: BooksStateModel['current'] = {
+  book: null,
+  loading: false,
+  error: null,
+};
+const initialUpload: BooksStateModel['upload'] = {
   uploading: false,
   progress: null,
   book: null,
   error: null,
 };
 
-@State<BooksStateModel>({ name: 'books', defaults })
+type Ctx = StateContext<BooksStateModel>;
+
+@State<BooksStateModel>({
+  name: 'books',
+  defaults: {
+    list: initialList,
+    current: initialCurrent,
+    upload: initialUpload,
+  },
+})
 @Injectable()
 export class BooksState {
   private readonly http = inject(HttpClient);
 
   @Selector()
+  static books(state: BooksStateModel): BookSummary[] {
+    return state.list.books;
+  }
+
+  @Selector()
+  static booksLoading(state: BooksStateModel): boolean {
+    return state.list.loading;
+  }
+
+  @Selector()
+  static booksError(state: BooksStateModel): string | null {
+    return state.list.error;
+  }
+
+  @Selector()
+  static currentBook(state: BooksStateModel): BookDetails | null {
+    return state.current.book;
+  }
+
+  @Selector()
+  static currentBookLoading(state: BooksStateModel): boolean {
+    return state.current.loading;
+  }
+
+  @Selector()
+  static currentBookError(state: BooksStateModel): string | null {
+    return state.current.error;
+  }
+
+  @Selector()
   static uploading(state: BooksStateModel): boolean {
-    return state.uploading;
+    return state.upload.uploading;
   }
 
   @Selector()
-  static progress(state: BooksStateModel): number | null {
-    return state.progress;
+  static uploadProgress(state: BooksStateModel): number | null {
+    return state.upload.progress;
   }
 
   @Selector()
-  static book(state: BooksStateModel): BookResult | null {
-    return state.book;
+  static uploadedBook(state: BooksStateModel): BookDetails | null {
+    return state.upload.book;
   }
 
   @Selector()
-  static error(state: BooksStateModel): string | null {
-    return state.error;
+  static uploadError(state: BooksStateModel): string | null {
+    return state.upload.error;
+  }
+
+  @Action(LoadBooks, { cancelUncompleted: true })
+  loadBooks(ctx: Ctx) {
+    // Keep showing the books we have while refreshing.
+    ctx.setState(patch({ list: patch({ loading: true, error: null }) }));
+    return this.http.get<BookSummary[]>('/api/books').pipe(
+      mergeMap((books) => ctx.dispatch(new LoadBooksSuccess(books))),
+      catchError((error: HttpErrorResponse) =>
+        ctx.dispatch(new LoadBooksFail(errorMessage(error))),
+      ),
+    );
+  }
+
+  @Action(LoadBooksSuccess)
+  loadBooksSuccess(ctx: Ctx, { books }: LoadBooksSuccess) {
+    ctx.setState(patch({ list: { ...initialList, books } }));
+  }
+
+  @Action(LoadBooksFail)
+  loadBooksFail(ctx: Ctx, { error }: LoadBooksFail) {
+    ctx.setState(patch({ list: patch({ loading: false, error }) }));
+  }
+
+  @Action(LoadBook, { cancelUncompleted: true })
+  loadBook(ctx: Ctx, { id }: LoadBook) {
+    ctx.setState(patch({ current: { ...initialCurrent, loading: true } }));
+    if (!Number.isInteger(id) || id < 1) {
+      return ctx.dispatch(new LoadBookFail('Book not found'));
+    }
+    return this.http.get<BookDetails>(`/api/book/${id}`).pipe(
+      mergeMap((book) => ctx.dispatch(new LoadBookSuccess(book))),
+      catchError((error: HttpErrorResponse) =>
+        ctx.dispatch(new LoadBookFail(errorMessage(error))),
+      ),
+    );
+  }
+
+  @Action(LoadBookSuccess)
+  loadBookSuccess(ctx: Ctx, { book }: LoadBookSuccess) {
+    ctx.setState(patch({ current: { ...initialCurrent, book } }));
+  }
+
+  @Action(LoadBookFail)
+  loadBookFail(ctx: Ctx, { error }: LoadBookFail) {
+    ctx.setState(patch({ current: { ...initialCurrent, error } }));
   }
 
   @Action(UploadFile, { cancelUncompleted: true })
-  uploadFile(ctx: StateContext<BooksStateModel>, { payload }: UploadFile) {
-    ctx.setState({ ...defaults, uploading: true, progress: 0 });
+  uploadFile(ctx: Ctx, { payload }: UploadFile) {
+    ctx.setState(
+      patch({ upload: { ...initialUpload, uploading: true, progress: 0 } }),
+    );
 
     const body = new FormData();
     body.append('file', payload.file);
@@ -68,7 +185,7 @@ export class BooksState {
     }
 
     return this.http
-      .post<BookResult>('/api/book', body, {
+      .post<BookDetails>('/api/book', body, {
         observe: 'events',
         reportProgress: true,
       })
@@ -91,34 +208,51 @@ export class BooksState {
   }
 
   @Action(UploadFileProgress)
-  uploadFileProgress(
-    ctx: StateContext<BooksStateModel>,
-    { percent }: UploadFileProgress,
-  ) {
+  uploadFileProgress(ctx: Ctx, { percent }: UploadFileProgress) {
     // Once the file is fully sent the server is still counting words.
-    ctx.patchState({ progress: percent < 100 ? percent : null });
+    ctx.setState(
+      patch({ upload: patch({ progress: percent < 100 ? percent : null }) }),
+    );
   }
 
   @Action(UploadFileSuccess)
-  uploadFileSuccess(
-    ctx: StateContext<BooksStateModel>,
-    { book }: UploadFileSuccess,
-  ) {
-    ctx.setState({ ...defaults, book });
+  uploadFileSuccess(ctx: Ctx, { book }: UploadFileSuccess) {
+    const summary = toSummary(book);
+    const { books } = ctx.getState().list;
+    ctx.setState(
+      patch({
+        upload: { ...initialUpload, book },
+        // Show the new book in the list without waiting for a reload.
+        list: patch({
+          books: [summary, ...books.filter((b) => b.id !== book.id)],
+        }),
+      }),
+    );
   }
 
   @Action(UploadFileFail)
-  uploadFileFail(
-    ctx: StateContext<BooksStateModel>,
-    { error }: UploadFileFail,
-  ) {
-    ctx.setState({ ...defaults, error });
+  uploadFileFail(ctx: Ctx, { error }: UploadFileFail) {
+    ctx.setState(patch({ upload: { ...initialUpload, error } }));
   }
 
   @Action(ResetUpload)
-  resetUpload(ctx: StateContext<BooksStateModel>) {
-    ctx.setState(defaults);
+  resetUpload(ctx: Ctx) {
+    ctx.setState(patch({ upload: initialUpload }));
   }
+}
+
+function toSummary(book: BookDetails): BookSummary {
+  const { id, name, description, status, wordCount, uniqueWordCount } = book;
+  const { createdAt } = book;
+  return {
+    id,
+    name,
+    description,
+    status,
+    wordCount,
+    uniqueWordCount,
+    createdAt,
+  };
 }
 
 function errorMessage(error: HttpErrorResponse): string {

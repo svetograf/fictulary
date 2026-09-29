@@ -13,29 +13,27 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTableModule } from '@angular/material/table';
 import {
   BOOK_DESCRIPTION_MAX_LENGTH,
   BOOK_FILE_MAX_SIZE,
   BOOK_NAME_MAX_LENGTH,
   BookStatus,
 } from '@fictulary/shared/models';
+import { RouterLink } from '@angular/router';
 import { select } from '@ngxs/store';
+import { BookDetailsCard } from './book-details-card';
+import { BOOK_STATUS_LABELS } from './book-status';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 import { fileExtension, maxFileSize, notBlank } from './file-validators';
-
-export const BOOK_STATUS_LABELS: Record<BookStatus, string> = {
-  [BookStatus.NOT_READ]: 'Not read',
-  [BookStatus.READING]: 'Reading',
-  [BookStatus.READ]: 'Read',
-};
 
 @Component({
   selector: 'app-upload-page',
   imports: [
     DecimalPipe,
     ReactiveFormsModule,
+    RouterLink,
+    BookDetailsCard,
     MatButtonModule,
     MatButtonToggleModule,
     MatCardModule,
@@ -43,7 +41,6 @@ export const BOOK_STATUS_LABELS: Record<BookStatus, string> = {
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
-    MatTableModule,
   ],
   templateUrl: './upload-page.html',
   styleUrl: './upload-page.scss',
@@ -52,9 +49,9 @@ export class UploadPage {
   private readonly books = inject(BooksService);
 
   protected readonly uploading = select(BooksState.uploading);
-  protected readonly progress = select(BooksState.progress);
-  protected readonly book = select(BooksState.book);
-  protected readonly error = select(BooksState.error);
+  protected readonly progress = select(BooksState.uploadProgress);
+  protected readonly book = select(BooksState.uploadedBook);
+  protected readonly error = select(BooksState.uploadError);
 
   protected readonly limits = {
     fileSizeMb: BOOK_FILE_MAX_SIZE / (1024 * 1024),
@@ -63,7 +60,6 @@ export class UploadPage {
   };
   protected readonly statuses = Object.values(BookStatus);
   protected readonly statusLabels = BOOK_STATUS_LABELS;
-  protected readonly wordColumns = ['rank', 'word', 'count'];
   protected readonly dragging = signal(false);
 
   protected readonly form = new FormGroup({
@@ -142,10 +138,6 @@ export class UploadPage {
         status,
       });
     }
-  }
-
-  protected maxWordCount(): number {
-    return this.book()?.words[0]?.count ?? 1;
   }
 
   private setFile(file: File | null): void {

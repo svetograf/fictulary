@@ -136,51 +136,9 @@
   <p class="error" role="alert"><mat-icon>error</mat-icon> {{ message }}</p>
 }
 @if (book(); as result) {
-  <mat-card appearance="outlined" class="result">
-    <mat-card-header>
-      <mat-card-title>{{ result.name }}</mat-card-title>
-      <mat-card-subtitle>{{ statusLabels[result.status] }}</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      @if (result.description) {
-        <p class="description">{{ result.description }}</p>
-      }
-      <dl class="stats">
-        <div>
-          <dt>Words</dt>
-          <dd>{{ result.wordCount | number }}</dd>
-        </div>
-        <div>
-          <dt>Distinct words</dt>
-          <dd>{{ result.uniqueWordCount | number }}</dd>
-        </div>
-      </dl>
-
-      <h3>Top {{ result.words.length }} words</h3>
-      <table mat-table [dataSource]="result.words" class="words">
-        <ng-container matColumnDef="rank">
-          <th mat-header-cell *matHeaderCellDef>#</th>
-          <td mat-cell *matCellDef="let row; let i = index">{{ i + 1 }}</td>
-        </ng-container>
-        <ng-container matColumnDef="word">
-          <th mat-header-cell *matHeaderCellDef>Word</th>
-          <td mat-cell *matCellDef="let row">{{ row.word }}</td>
-        </ng-container>
-        <ng-container matColumnDef="count">
-          <th mat-header-cell *matHeaderCellDef>Count</th>
-          <td mat-cell *matCellDef="let row">
-            <div class="count">
-              <span
-                class="bar"
-                [style.width.%]="(row.count / maxWordCount()) * 100"
-              ></span>
-              <span>{{ row.count | number }}</span>
-            </div>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="wordColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: wordColumns"></tr>
-      </table>
-    </mat-card-content>
-  </mat-card>
+  <app-book-details-card [book]="result" />
+  <a mat-stroked-button [routerLink]="['/book', result.id]" class="open-book">
+    <mat-icon>open_in_new</mat-icon>
+    Open book page
+  </a>
 }

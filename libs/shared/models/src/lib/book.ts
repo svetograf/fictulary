@@ -14,7 +14,8 @@ export interface WordCount {
   count: number;
 }
 
-export interface BookResult {
+/** A book as shown in lists, without its words. */
+export interface BookSummary {
   id: number;
   name: string;
   description: string | null;
@@ -23,6 +24,11 @@ export interface BookResult {
   wordCount: number;
   /** Number of distinct words after grouping word forms. */
   uniqueWordCount: number;
-  /** Most frequent words, ordered by count descending. */
+  /** ISO 8601 timestamp. */
+  createdAt: string;
+}
+
+export interface BookDetails extends BookSummary {
+  /** Most frequent words (up to BOOK_TOP_WORDS_LIMIT), by count descending. */
   words: WordCount[];
 }

@@ -1,0 +1,19 @@
+<a mat-button routerLink="/" class="back">
+  <mat-icon>arrow_back</mat-icon>
+  All books
+</a>
+
+@if (loading()) {
+  <div class="status" role="status">
+    <mat-progress-spinner mode="indeterminate" diameter="32" />
+    <span>Loading book…</span>
+  </div>
+} @else if (error(); as message) {
+  <div class="status error" role="alert">
+    <mat-icon>error</mat-icon>
+    <span>{{ message }}</span>
+    <button mat-button (click)="retry()">Retry</button>
+  </div>
+} @else if (book(); as current) {
+  <app-book-details-card [book]="current" />
+}

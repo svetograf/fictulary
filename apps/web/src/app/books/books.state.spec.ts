@@ -5,18 +5,23 @@ import {
 } from '@angular/common/http/testing';
 import { HttpEventType } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { BookResult, BookStatus } from '@fictulary/shared/models';
+import { BookDetails, BookStatus, BookSummary } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
-import { ResetUpload, UploadFile } from './books.actions';
+import { LoadBook, LoadBooks, ResetUpload, UploadFile } from './books.actions';
 import { BooksState } from './books.state';
 
-const book: BookResult = {
+const summary: BookSummary = {
   id: 1,
   name: 'Tale',
   description: null,
   status: BookStatus.READ,
   wordCount: 3,
   uniqueWordCount: 2,
+  createdAt: '2026-09-01T10:00:00.000Z',
+};
+
+const book: BookDetails = {
+  ...summary,
   words: [
     { word: 'be', count: 2 },
     { word: 'cat', count: 1 },
@@ -65,9 +70,9 @@ describe('BooksState', () => {
 
     req.flush(book);
 
-    expect(store.selectSnapshot(BooksState.book)).toEqual(book);
+    expect(store.selectSnapshot(BooksState.uploadedBook)).toEqual(book);
     expect(store.selectSnapshot(BooksState.uploading)).toBe(false);
-    expect(store.selectSnapshot(BooksState.error)).toBeNull();
+    expect(store.selectSnapshot(BooksState.uploadError)).toBeNull();
   });
 
   it('omits an empty description', () => {
@@ -82,10 +87,10 @@ describe('BooksState', () => {
     const req = http.expectOne('/api/book');
 
     req.event({ type: HttpEventType.UploadProgress, loaded: 40, total: 100 });
-    expect(store.selectSnapshot(BooksState.progress)).toBe(40);
+    expect(store.selectSnapshot(BooksState.uploadProgress)).toBe(40);
 
     req.event({ type: HttpEventType.UploadProgress, loaded: 100, total: 100 });
-    expect(store.selectSnapshot(BooksState.progress)).toBeNull();
+    expect(store.selectSnapshot(BooksState.uploadProgress)).toBeNull();
     expect(store.selectSnapshot(BooksState.uploading)).toBe(true);
 
     req.flush(book);
@@ -100,17 +105,19 @@ describe('BooksState', () => {
         { status: 400, statusText: 'Bad Request' },
       );
 
-    expect(store.selectSnapshot(BooksState.error)).toBe(
+    expect(store.selectSnapshot(BooksState.uploadError)).toBe(
       'name should not be empty. status is invalid',
     );
     expect(store.selectSnapshot(BooksState.uploading)).toBe(false);
-    expect(store.selectSnapshot(BooksState.book)).toBeNull();
+    expect(store.selectSnapshot(BooksState.uploadedBook)).toBeNull();
   });
 
   it('reports network errors', () => {
     upload();
     http.expectOne('/api/book').error(new ProgressEvent('error'));
-    expect(store.selectSnapshot(BooksState.error)).toMatch(/reach the server/);
+    expect(store.selectSnapshot(BooksState.uploadError)).toMatch(
+      /reach the server/,
+    );
   });
 
   it('clears a previous result when uploading again, and on reset', () => {
@@ -118,10 +125,98 @@ describe('BooksState', () => {
     http.expectOne('/api/book').flush(book);
 
     upload();
-    expect(store.selectSnapshot(BooksState.book)).toBeNull();
+    expect(store.selectSnapshot(BooksState.uploadedBook)).toBeNull();
     http.expectOne('/api/book').flush(book);
 
     store.dispatch(new ResetUpload());
-    expect(store.selectSnapshot(BooksState.book)).toBeNull();
+    expect(store.selectSnapshot(BooksState.uploadedBook)).toBeNull();
+  });
+
+  it('adds an uploaded book to the top of the list', () => {
+    store.dispatch(new LoadBooks());
+    http.expectOne('/api/books').flush([{ ...summary, id: 9 }]);
+
+    upload();
+    http.expectOne('/api/book').flush(book);
+
+    expect(store.selectSnapshot(BooksState.books).map((b) => b.id)).toEqual([
+      1, 9,
+    ]);
+  });
+
+  describe('LoadBooks', () => {
+    it('loads the book list', () => {
+      store.dispatch(new LoadBooks());
+      expect(store.selectSnapshot(BooksState.booksLoading)).toBe(true);
+
+      http.expectOne('/api/books').flush([summary]);
+
+      expect(store.selectSnapshot(BooksState.books)).toEqual([summary]);
+      expect(store.selectSnapshot(BooksState.booksLoading)).toBe(false);
+    });
+
+    it('keeps the current list and records the error on failure', () => {
+      store.dispatch(new LoadBooks());
+      http.expectOne('/api/books').flush([summary]);
+
+      store.dispatch(new LoadBooks());
+      http
+        .expectOne('/api/books')
+        .flush(
+          { message: 'Database unavailable' },
+          { status: 500, statusText: 'Server Error' },
+        );
+
+      expect(store.selectSnapshot(BooksState.books)).toEqual([summary]);
+      expect(store.selectSnapshot(BooksState.booksError)).toBe(
+        'Database unavailable',
+      );
+      expect(store.selectSnapshot(BooksState.booksLoading)).toBe(false);
+    });
+  });
+
+  describe('LoadBook', () => {
+    it('loads a single book with its words', () => {
+      store.dispatch(new LoadBook(1));
+      expect(store.selectSnapshot(BooksState.currentBookLoading)).toBe(true);
+
+      http.expectOne('/api/book/1').flush(book);
+
+      expect(store.selectSnapshot(BooksState.currentBook)).toEqual(book);
+      expect(store.selectSnapshot(BooksState.currentBookLoading)).toBe(false);
+    });
+
+    it('clears the previous book while loading another one', () => {
+      store.dispatch(new LoadBook(1));
+      http.expectOne('/api/book/1').flush(book);
+
+      store.dispatch(new LoadBook(2));
+      expect(store.selectSnapshot(BooksState.currentBook)).toBeNull();
+      http.expectOne('/api/book/2').flush({ ...book, id: 2 });
+    });
+
+    it('reports a missing book', () => {
+      store.dispatch(new LoadBook(404));
+      http
+        .expectOne('/api/book/404')
+        .flush(
+          { message: 'Book 404 not found' },
+          { status: 404, statusText: 'Not Found' },
+        );
+
+      expect(store.selectSnapshot(BooksState.currentBook)).toBeNull();
+      expect(store.selectSnapshot(BooksState.currentBookError)).toBe(
+        'Book 404 not found',
+      );
+    });
+
+    it('rejects invalid ids without calling the API', () => {
+      store.dispatch(new LoadBook(Number.NaN));
+      http.expectNone(() => true);
+      expect(store.selectSnapshot(BooksState.currentBookError)).toBe(
+        'Book not found',
+      );
+      expect(store.selectSnapshot(BooksState.currentBookLoading)).toBe(false);
+    });
   });
 });
