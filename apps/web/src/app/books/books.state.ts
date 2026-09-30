@@ -4,11 +4,20 @@ import {
   HttpEventType,
 } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { BookDetails, BookSummary } from '@fictulary/shared/models';
+import {
+  BookDetails,
+  BookSummary,
+  DictionaryWord,
+  WordStatus,
+} from '@fictulary/shared/models';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
 import { patch } from '@ngxs/store/operators';
 import { catchError, map, mergeMap, of } from 'rxjs';
 import { SignOut } from '../auth/auth.actions';
+import {
+  ChangeWordStatusSuccess,
+  MarkWordViewedSuccess,
+} from '../dictionary/dictionary.actions';
 import { httpErrorMessage } from '../shared/http-error-message';
 import {
   LoadBook,
@@ -181,7 +190,7 @@ export class BooksState {
     const body = new FormData();
     body.append('file', payload.file);
     body.append('name', payload.name);
-    body.append('status', payload.status);
+    body.append('wordStatus', payload.wordStatus);
     if (payload.description) {
       body.append('description', payload.description);
     }
@@ -247,6 +256,24 @@ export class BooksState {
     });
   }
 
+  /**
+   * Keeps the shown books' "words to learn" in step with the dictionary:
+   * a word marked known leaves the list, other changes update its status.
+   */
+  @Action([ChangeWordStatusSuccess, MarkWordViewedSuccess])
+  wordStatusChanged(
+    ctx: Ctx,
+    { word }: ChangeWordStatusSuccess | MarkWordViewedSuccess,
+  ) {
+    const { current, upload } = ctx.getState();
+    ctx.setState(
+      patch({
+        current: patch({ book: withWordStatus(current.book, word) }),
+        upload: patch({ book: withWordStatus(upload.book, word) }),
+      }),
+    );
+  }
+
   @Action(ResetUpload)
   resetUpload(ctx: Ctx) {
     ctx.setState(patch({ upload: initialUpload }));
@@ -254,15 +281,32 @@ export class BooksState {
 }
 
 function toSummary(book: BookDetails): BookSummary {
-  const { id, name, description, status, wordCount, uniqueWordCount } = book;
+  const { id, name, description, wordCount, uniqueWordCount } = book;
   const { createdAt } = book;
   return {
     id,
     name,
     description,
-    status,
     wordCount,
     uniqueWordCount,
     createdAt,
+  };
+}
+
+function withWordStatus(
+  book: BookDetails | null,
+  changed: DictionaryWord,
+): BookDetails | null {
+  if (!book?.words.some((w) => w.wordId === changed.wordId)) {
+    return book;
+  }
+  return {
+    ...book,
+    words:
+      changed.status === WordStatus.KNOWN
+        ? book.words.filter((w) => w.wordId !== changed.wordId)
+        : book.words.map((w) =>
+            w.wordId === changed.wordId ? { ...w, status: changed.status } : w,
+          ),
   };
 }

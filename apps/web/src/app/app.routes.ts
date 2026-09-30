@@ -30,6 +30,13 @@ export const appRoutes: Route[] = [
     loadComponent: () => import('./books/book-page').then((m) => m.BookPage),
   },
   {
+    path: 'my-dictionary',
+    title: 'My dictionary',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./dictionary/dictionary-page').then((m) => m.DictionaryPage),
+  },
+  {
     path: 'upload',
     title: 'Upload a book',
     canActivate: [authGuard],

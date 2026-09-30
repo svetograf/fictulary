@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { authConfig } from './config/auth.config';
 import { databaseConfig } from './config/database.config';
+import { DictionaryModule } from './dictionary/dictionary.module';
 import { BooksModule } from './books/books.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { BooksModule } from './books/books.module';
     }),
     BooksModule,
     AuthModule,
+    DictionaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 .subtitle {
   display: flex;
   align-items: center;
@@ -39,4 +41,81 @@
   max-width: 60%;
   border-radius: 4px;
   background: var(--mat-sys-primary);
+}
+
+.hint {
+  margin: 0 0 8px;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-medium);
+  white-space: nowrap;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+
+  &[data-status='UNKNOWN'] {
+    background: var(--mat-sys-surface-container-highest);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.all-known {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.word {
+  padding: 4px 8px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: var(--mat-sys-corner-small);
+  background: none;
+  color: var(--mat-sys-primary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover,
+  &:focus-visible {
+    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+    outline: none;
+  }
+}
+
+.actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+// "Learn" uses the accent (tertiary) color, as on My dictionary.
+.learn {
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-tertiary),
+      state-layer-color: var(--mat-sys-tertiary),
+    )
+  );
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

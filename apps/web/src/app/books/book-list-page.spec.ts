@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { BookStatus, BookSummary } from '@fictulary/shared/models';
+import { BookSummary } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import { SignInSuccess, SignOut } from '../auth/auth.actions';
 import { AuthState } from '../auth/auth.state';
@@ -14,7 +14,6 @@ const book: BookSummary = {
   id: 5,
   name: 'A Tale of Two Cities',
   description: null,
-  status: BookStatus.READING,
   wordCount: 140786,
   uniqueWordCount: 7084,
   createdAt: '2026-09-01T10:00:00.000Z',

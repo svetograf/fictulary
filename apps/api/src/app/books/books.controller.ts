@@ -15,6 +15,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { AuthUser } from '../auth/jwt-payload';
 import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { TextFileValidator } from './text-file.validator';
@@ -23,16 +25,19 @@ import { TextFileValidator } from './text-file.validator';
 export class BooksController {
   constructor(private readonly booksService: BooksService) {}
 
-  /** Lists all books, newest first, without their words. */
+  /** Lists the user's books, newest first, without their words. */
   @Get('books')
-  findAll(): Promise<BookSummary[]> {
-    return this.booksService.findAll();
+  findAll(@CurrentUser() user: AuthUser): Promise<BookSummary[]> {
+    return this.booksService.findAll(user.id);
   }
 
   /** Returns one book with its most frequent words. */
   @Get('book/:id')
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<BookDetails> {
-    return this.booksService.findOne(id);
+  findOne(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<BookDetails> {
+    return this.booksService.findOne(user.id, id);
   }
 
   /**
@@ -49,7 +54,8 @@ export class BooksController {
     @UploadedFile(new ParseFilePipe({ validators: [new TextFileValidator()] }))
     file: Express.Multer.File,
     @Body() dto: CreateBookDto,
+    @CurrentUser() user: AuthUser,
   ): Promise<BookDetails> {
-    return this.booksService.create(dto, file.buffer.toString('utf8'));
+    return this.booksService.create(user.id, dto, file.buffer.toString('utf8'));
   }
 }

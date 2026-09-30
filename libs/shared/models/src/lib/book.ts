@@ -1,17 +1,18 @@
-export enum BookStatus {
-  NOT_READ = 'NOT_READ',
-  READING = 'READING',
-  READ = 'READ',
-}
+import { WordStatus } from './dictionary';
 
 export const BOOK_FILE_MAX_SIZE = 1024 * 1024;
 export const BOOK_NAME_MAX_LENGTH = 1000;
 export const BOOK_DESCRIPTION_MAX_LENGTH = 5000;
 export const BOOK_TOP_WORDS_LIMIT = 100;
 
+/** A word of a book that the reader hasn't learned yet. */
 export interface WordCount {
+  /** Word ids are bigints, so they travel as strings. */
+  wordId: string;
   word: string;
   count: number;
+  /** The reader's status for the word: only LEARNING or UNKNOWN. */
+  status: WordStatus;
 }
 
 /** A book as shown in lists, without its words. */
@@ -19,7 +20,6 @@ export interface BookSummary {
   id: number;
   name: string;
   description: string | null;
-  status: BookStatus;
   /** Total number of words in the uploaded text. */
   wordCount: number;
   /** Number of distinct words after grouping word forms. */
@@ -29,6 +29,21 @@ export interface BookSummary {
 }
 
 export interface BookDetails extends BookSummary {
-  /** Most frequent words (up to BOOK_TOP_WORDS_LIMIT), by count descending. */
+  /**
+   * The book's most frequent words the reader is still learning or doesn't
+   * know (up to BOOK_TOP_WORDS_LIMIT), by count descending. Known words are
+   * left out.
+   */
   words: WordCount[];
+}
+
+/** Multipart fields sent with the uploaded file to `POST /api/book`. */
+export interface UploadBookFields {
+  name: string;
+  description?: string;
+  /**
+   * How well the uploader knows the book: words new to their dictionary get
+   * this status, and KNOWN ("I've read it") also upgrades words already in it.
+   */
+  wordStatus: WordStatus;
 }

@@ -33,10 +33,9 @@
     <mat-nav-list>
       @for (book of books(); track book.id) {
         <a mat-list-item [routerLink]="['/book', book.id]">
-          <mat-icon matListItemIcon>{{ statusIcons[book.status] }}</mat-icon>
+          <mat-icon matListItemIcon>menu_book</mat-icon>
           <span matListItemTitle>{{ book.name }}</span>
           <span matListItemLine>
-            {{ statusLabels[book.status] }} ·
             {{ book.wordCount | number }} words ·
             {{ book.uniqueWordCount | number }} distinct · Added
             {{ book.createdAt | date: 'mediumDate' }}

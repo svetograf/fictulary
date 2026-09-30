@@ -1,10 +1,11 @@
-import { BookDetails, BookStatus, BookSummary } from '@fictulary/shared/models';
+import { BookDetails, BookSummary, WordStatus } from '@fictulary/shared/models';
 
 export interface UploadBookPayload {
   file: File;
   name: string;
   description: string;
-  status: BookStatus;
+  /** Status for the book's words in the uploader's dictionary. */
+  wordStatus: WordStatus;
 }
 
 export class LoadBooks {

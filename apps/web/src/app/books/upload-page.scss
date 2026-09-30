@@ -91,3 +91,10 @@ mat-error {
 .open-book {
   align-self: flex-start;
 }
+
+.status-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}

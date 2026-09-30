@@ -5,17 +5,20 @@ import {
 } from '@angular/common/http/testing';
 import { HttpEventType } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { BookDetails, BookStatus, BookSummary } from '@fictulary/shared/models';
+import { BookDetails, BookSummary, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import { LoadBook, LoadBooks, ResetUpload, UploadFile } from './books.actions';
 import { SignOut } from '../auth/auth.actions';
+import {
+  ChangeWordStatusSuccess,
+  MarkWordViewedSuccess,
+} from '../dictionary/dictionary.actions';
 import { BooksState } from './books.state';
 
 const summary: BookSummary = {
   id: 1,
   name: 'Tale',
   description: null,
-  status: BookStatus.READ,
   wordCount: 3,
   uniqueWordCount: 2,
   createdAt: '2026-09-01T10:00:00.000Z',
@@ -24,8 +27,8 @@ const summary: BookSummary = {
 const book: BookDetails = {
   ...summary,
   words: [
-    { word: 'be', count: 2 },
-    { word: 'cat', count: 1 },
+    { wordId: '1', word: 'be', count: 2, status: WordStatus.LEARNING },
+    { wordId: '2', word: 'cat', count: 1, status: WordStatus.UNKNOWN },
   ],
 };
 
@@ -39,7 +42,7 @@ describe('BooksState', () => {
         file: new File(['I was a cat'], 'tale.txt', { type: 'text/plain' }),
         name: 'Tale',
         description,
-        status: BookStatus.READ,
+        wordStatus: WordStatus.KNOWN,
       }),
     );
 
@@ -67,7 +70,7 @@ describe('BooksState', () => {
     expect((body.get('file') as File).name).toBe('tale.txt');
     expect(body.get('name')).toBe('Tale');
     expect(body.get('description')).toBe('A classic');
-    expect(body.get('status')).toBe(BookStatus.READ);
+    expect(body.get('wordStatus')).toBe(WordStatus.KNOWN);
 
     req.flush(book);
 
@@ -218,6 +221,67 @@ describe('BooksState', () => {
         'Book not found',
       );
       expect(store.selectSnapshot(BooksState.currentBookLoading)).toBe(false);
+    });
+  });
+
+  describe('when a word status changes', () => {
+    const dictionaryWord = (wordId: string, status: WordStatus) => ({
+      wordId,
+      word: wordId === '1' ? 'be' : 'cat',
+      status,
+      count: 1,
+      bookCount: 1,
+    });
+
+    beforeEach(() => {
+      store.dispatch(new LoadBook(1));
+      http.expectOne('/api/book/1').flush(book);
+      upload();
+      http.expectOne('/api/book').flush(book);
+    });
+
+    it('drops words marked known from the shown books', () => {
+      store.dispatch(
+        new ChangeWordStatusSuccess(dictionaryWord('1', WordStatus.KNOWN)),
+      );
+
+      for (const shown of [
+        store.selectSnapshot(BooksState.currentBook),
+        store.selectSnapshot(BooksState.uploadedBook),
+      ]) {
+        expect(shown?.words.map((w) => w.wordId)).toEqual(['2']);
+      }
+    });
+
+    it('updates the status of other changes', () => {
+      store.dispatch(
+        new ChangeWordStatusSuccess(dictionaryWord('2', WordStatus.LEARNING)),
+      );
+
+      expect(
+        store
+          .selectSnapshot(BooksState.currentBook)
+          ?.words.map((w) => w.status),
+      ).toEqual([WordStatus.LEARNING, WordStatus.LEARNING]);
+    });
+
+    it('shows an unknown word opened from the book as learning', () => {
+      store.dispatch(
+        new MarkWordViewedSuccess(dictionaryWord('2', WordStatus.LEARNING)),
+      );
+      expect(
+        store
+          .selectSnapshot(BooksState.currentBook)
+          ?.words.find((w) => w.wordId === '2')?.status,
+      ).toBe(WordStatus.LEARNING);
+    });
+
+    it('ignores words that are not in the shown books', () => {
+      const before = store.selectSnapshot(BooksState.currentBook);
+      store.dispatch(
+        new ChangeWordStatusSuccess(dictionaryWord('99', WordStatus.KNOWN)),
+      );
+      expect(store.selectSnapshot(BooksState.currentBook)).toBe(before);
     });
   });
 

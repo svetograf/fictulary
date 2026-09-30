@@ -16,9 +16,17 @@ import { AuthService } from './auth/auth.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { BooksController } from './books/books.controller';
 import { BooksService } from './books/books.service';
+import { DefinitionsService } from './dictionary/definitions.service';
+import { DictionaryController } from './dictionary/dictionary.controller';
+import { DictionaryService } from './dictionary/dictionary.service';
 
 /** Every controller in the app. Add new controllers here. */
-const CONTROLLERS: Type[] = [AppController, AuthController, BooksController];
+const CONTROLLERS: Type[] = [
+  AppController,
+  AuthController,
+  BooksController,
+  DictionaryController,
+];
 
 /** The only routes reachable without a token. */
 const PUBLIC_ROUTES = ['POST /api/sign-in', 'POST /api/sign-up'];
@@ -48,6 +56,7 @@ function routes(): Route[] {
           ]
             .filter((part) => part && part !== '/')
             .join('/')
+            .replace(/:word\b/, 'phone')
             .replace(/:\w+/g, '1');
           return { method, path: `/api/${path}`.replace(/\/$/, '') };
         })
@@ -84,6 +93,16 @@ describe('route protection', () => {
             create: resolves({}),
           },
         },
+        {
+          provide: DictionaryService,
+          useValue: {
+            list: resolves({}),
+            details: resolves({}),
+            updateStatus: resolves({}),
+            markViewed: resolves({}),
+          },
+        },
+        { provide: DefinitionsService, useValue: { lookup: resolves({}) } },
       ],
     }).compile();
 

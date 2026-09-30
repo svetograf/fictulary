@@ -1,5 +1,6 @@
+import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { BookStatus } from '@fictulary/shared/models';
+import { WordStatus } from '@fictulary/shared/models';
 import { provideStore } from '@ngxs/store';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
@@ -87,7 +88,7 @@ describe('UploadPage', () => {
     const file = txt('tale.txt');
     drop(file);
     form.controls.description.setValue('  Classic  ');
-    form.controls.status.setValue(BookStatus.READING);
+    form.controls.wordStatus.setValue(WordStatus.LEARNING);
 
     element.querySelector('form')?.dispatchEvent(new Event('submit'));
 
@@ -95,7 +96,20 @@ describe('UploadPage', () => {
       file,
       name: 'tale',
       description: 'Classic',
-      status: BookStatus.READING,
+      wordStatus: WordStatus.LEARNING,
     });
+  });
+
+  it('defaults to "Not read" and explains what each choice does', async () => {
+    expect(form.controls.wordStatus.value).toBe(WordStatus.UNKNOWN);
+    const hint = () =>
+      element.querySelector('#status-hint')?.textContent?.trim();
+    expect(hint()).toBe('New words go to your dictionary as unknown.');
+
+    form.controls.wordStatus.setValue(WordStatus.KNOWN);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(hint()).toBe(
+      'All its words are marked known, including ones you were learning.',
+    );
   });
 });

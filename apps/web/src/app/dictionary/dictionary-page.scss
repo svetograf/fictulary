@@ -1,0 +1,139 @@
+@use '@angular/material' as mat;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  h2 {
+    font: var(--mat-sys-headline-small);
+    margin: 0;
+  }
+
+  mat-icon {
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+}
+
+.summary {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-error);
+}
+
+.words {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: grid;
+    grid-template-columns: 3.5em minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.rank {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  text-align: right;
+}
+
+.word {
+  justify-self: start;
+  max-width: 100%;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: var(--mat-sys-corner-small);
+  background: none;
+  color: var(--mat-sys-primary);
+  font: var(--mat-sys-title-medium);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  text-align: left;
+
+  &:hover,
+  &:focus-visible {
+    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+    outline: none;
+  }
+}
+
+.usage {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+// "Learn" is the action we want to encourage: filled, in the accent
+// (tertiary) color.
+.learn {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-tertiary),
+      filled-label-text-color: var(--mat-sys-on-tertiary),
+      filled-state-layer-color: var(--mat-sys-on-tertiary),
+      filled-ripple-color: color-mix(
+          in srgb,
+          var(--mat-sys-on-tertiary) 12%,
+          transparent
+        ),
+    )
+  );
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 16px;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+
+  mat-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 48px;
+  }
+}
+
+@media (max-width: 640px) {
+  .words li {
+    grid-template-columns: 2.5em minmax(0, 1fr);
+    row-gap: 4px;
+  }
+
+  .usage,
+  .actions {
+    grid-column: 2;
+  }
+
+  .actions button {
+    flex: 1;
+  }
+}

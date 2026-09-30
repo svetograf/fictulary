@@ -4,7 +4,11 @@ html {
   color-scheme: light dark;
   @include mat.theme(
     (
-      color: mat.$azure-palette,
+      color: (
+        primary: mat.$azure-palette,
+        // Accent color, used for calls to action such as "Learn".
+        tertiary: mat.$orange-palette,
+      ),
       typography: Roboto,
       density: 0,
     )

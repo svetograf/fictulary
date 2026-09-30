@@ -18,6 +18,7 @@ import { RestoreSession } from './auth/auth.actions';
 import { authInterceptor } from './auth/auth.interceptor';
 import { AuthState } from './auth/auth.state';
 import { BooksState } from './books/books.state';
+import { DictionaryState } from './dictionary/dictionary.state';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,7 +26,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(appRoutes, withComponentInputBinding()),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideStore(
-      [AuthState, BooksState],
+      [AuthState, BooksState, DictionaryState],
       withNgxsDevelopmentOptions({
         warnOnUnhandledActions: true,
       }),

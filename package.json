@@ -78,6 +78,7 @@
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
     "typeorm": "^1.1.1",
-    "wink-lemmatizer": "^3.0.4"
+    "wink-lemmatizer": "^3.0.4",
+    "wordpos": "^2.1.0"
   }
 }

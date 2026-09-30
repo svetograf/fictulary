@@ -7,7 +7,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { select } from '@ngxs/store';
 import { AuthState } from '../auth/auth.state';
-import { BOOK_STATUS_ICONS, BOOK_STATUS_LABELS } from './book-status';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 
@@ -32,9 +31,6 @@ export class BookListPage {
   protected readonly books = select(BooksState.books);
   protected readonly loading = select(BooksState.booksLoading);
   protected readonly error = select(BooksState.booksError);
-
-  protected readonly statusLabels = BOOK_STATUS_LABELS;
-  protected readonly statusIcons = BOOK_STATUS_ICONS;
 
   constructor() {
     // The API requires signing in; load once a session exists.

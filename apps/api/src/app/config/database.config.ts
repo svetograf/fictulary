@@ -4,6 +4,7 @@ import { BookWord } from '../books/entities/book-word.entity';
 import { Book } from '../books/entities/book.entity';
 import { Word } from '../books/entities/word.entity';
 import { migrations } from '../../migrations';
+import { UserWord } from '../dictionary/user-word.entity';
 import { User } from '../users/user.entity';
 
 /**
@@ -20,7 +21,7 @@ export function dataSourceOptions(): PostgresOptions {
     username: process.env.DB_USER ?? 'fictulary',
     password: process.env.DB_PASSWORD ?? 'fictulary',
     database: process.env.DB_NAME ?? 'fictulary',
-    entities: [Book, Word, BookWord, User],
+    entities: [Book, Word, BookWord, User, UserWord],
     migrations,
     // The schema is managed by migrations; never let TypeORM alter it.
     synchronize: false,

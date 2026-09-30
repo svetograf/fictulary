@@ -10,6 +10,10 @@
       >Books</a
     >
     @if (signedIn()) {
+      <a mat-button routerLink="/my-dictionary" routerLinkActive="active">
+        <mat-icon>translate</mat-icon>
+        Dictionary
+      </a>
       <a mat-button routerLink="/upload" routerLinkActive="active">
         <mat-icon>upload_file</mat-icon>
         Upload

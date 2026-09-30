@@ -3,6 +3,7 @@ import {
   BookDetails,
   BookSummary,
   WordCount,
+  WordStatus,
 } from '@fictulary/shared/models';
 import {
   BadRequestException,
@@ -10,6 +11,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, EntityManager, In } from 'typeorm';
+import { UserWord } from '../dictionary/user-word.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { BookWord } from './entities/book-word.entity';
 import { Book } from './entities/book.entity';
@@ -23,14 +25,18 @@ const WORD_INSERT_CHUNK_SIZE = 1000;
 export class BooksService {
   constructor(private readonly dataSource: DataSource) {}
 
-  async findAll(): Promise<BookSummary[]> {
+  /** The user's books, newest first. */
+  async findAll(userId: number): Promise<BookSummary[]> {
     const [books, wordCounts] = await Promise.all([
       this.dataSource.getRepository(Book).find({
+        where: { userId },
         order: { createdAt: 'DESC', id: 'DESC' },
       }),
       this.dataSource
         .getRepository(BookWord)
         .createQueryBuilder('bookWord')
+        .innerJoin('bookWord.book', 'book')
+        .where('book.userId = :userId', { userId })
         .select('bookWord.bookId', 'bookId')
         .addSelect('COUNT(*)', 'count')
         .groupBy('bookWord.bookId')
@@ -45,35 +51,32 @@ export class BooksService {
     );
   }
 
-  async findOne(id: number): Promise<BookDetails> {
-    const book = await this.dataSource.getRepository(Book).findOneBy({ id });
+  async findOne(userId: number, id: number): Promise<BookDetails> {
+    // Other users' books are reported as missing, not forbidden, so ids
+    // don't reveal which books exist.
+    const book = await this.dataSource
+      .getRepository(Book)
+      .findOneBy({ id, userId });
     if (!book) {
       throw new NotFoundException(`Book ${id} not found`);
     }
 
-    const bookWords = this.dataSource.getRepository(BookWord);
-    const [top, uniqueWordCount] = await Promise.all([
-      bookWords
-        .createQueryBuilder('bookWord')
-        .innerJoin('bookWord.word', 'word')
-        .select('word.word', 'word')
-        .addSelect('bookWord.count', 'count')
-        .where('bookWord.bookId = :id', { id })
-        .orderBy('bookWord.count', 'DESC')
-        .addOrderBy('word.word', 'ASC')
-        .limit(BOOK_TOP_WORDS_LIMIT)
-        .getRawMany<{ word: string; count: string }>(),
-      bookWords.countBy({ bookId: id }),
+    const [words, uniqueWordCount] = await Promise.all([
+      this.wordsToLearn(userId, id),
+      this.dataSource.getRepository(BookWord).countBy({ bookId: id }),
     ]);
-
-    return {
-      ...toSummary(book, uniqueWordCount),
-      // Raw rows skip the entity transformer, so bigint counts are strings.
-      words: top.map(({ word, count }) => ({ word, count: Number(count) })),
-    };
+    return { ...toSummary(book, uniqueWordCount), words };
   }
 
-  async create(dto: CreateBookDto, text: string): Promise<BookDetails> {
+  /**
+   * Stores the book's word counts and adds its words to the uploader's
+   * dictionary with `dto.wordStatus` (see saveWordCounts).
+   */
+  async create(
+    userId: number,
+    dto: CreateBookDto,
+    text: string,
+  ): Promise<BookDetails> {
     const { total, counts } = countWords(text);
     if (total === 0) {
       throw new BadRequestException('File does not contain any words');
@@ -84,30 +87,78 @@ export class BooksService {
         manager.create(Book, {
           name: dto.name,
           description: dto.description || null,
-          status: dto.status,
           wordCount: total,
+          userId,
         }),
       );
 
-      await saveWordCounts(manager, saved.id, counts);
+      await saveWordCounts(manager, saved, counts, dto.wordStatus);
       return saved;
     });
 
+    // Read back after saving: which words are left to learn depends on the
+    // statuses already in the user's dictionary.
     return {
       ...toSummary(book, counts.size),
-      words: topWords(counts, BOOK_TOP_WORDS_LIMIT),
+      words: await this.wordsToLearn(userId, book.id),
     };
+  }
+
+  /**
+   * The book's most frequent words that the user is learning or doesn't
+   * know yet; known words are left out.
+   */
+  private async wordsToLearn(
+    userId: number,
+    bookId: number,
+  ): Promise<WordCount[]> {
+    const rows = await this.dataSource
+      .getRepository(BookWord)
+      .createQueryBuilder('bookWord')
+      .innerJoin('bookWord.word', 'word')
+      .innerJoin(
+        UserWord,
+        'userWord',
+        'userWord.wordId = bookWord.wordId AND userWord.userId = :userId',
+        { userId },
+      )
+      .select('bookWord.wordId', 'wordId')
+      .addSelect('word.word', 'word')
+      .addSelect('bookWord.count', 'count')
+      .addSelect('userWord.status', 'status')
+      .where('bookWord.bookId = :bookId', { bookId })
+      .andWhere('userWord.status IN (:...statuses)', {
+        statuses: [WordStatus.LEARNING, WordStatus.UNKNOWN],
+      })
+      .orderBy('bookWord.count', 'DESC')
+      .addOrderBy('word.word', 'ASC')
+      .limit(BOOK_TOP_WORDS_LIMIT)
+      .getRawMany<{
+        wordId: string;
+        word: string;
+        count: string;
+        status: WordStatus;
+      }>();
+    // Raw rows skip the entity transformer, so bigint counts are strings.
+    return rows.map(({ wordId, word, count, status }) => ({
+      wordId: String(wordId),
+      word,
+      count: Number(count),
+      status,
+    }));
   }
 }
 
 /**
- * Adds any new words to the shared dictionary, then links them to the book
- * with their counts.
+ * Adds any new words to the shared dictionary, links them to the book with
+ * their counts, and adds them to the owner's dictionary: words new to it get
+ * `status`; KNOWN (the book was read) also upgrades words already there.
  */
 async function saveWordCounts(
   manager: EntityManager,
-  bookId: number,
+  book: Book,
   counts: Map<string, number>,
+  status: WordStatus,
 ): Promise<void> {
   const words = [...counts.keys()];
   for (let i = 0; i < words.length; i += WORD_INSERT_CHUNK_SIZE) {
@@ -129,11 +180,24 @@ async function saveWordCounts(
     await manager.insert(
       BookWord,
       entries.map(({ id, word }) => ({
-        bookId,
+        bookId: book.id,
         wordId: id,
         count: counts.get(word) ?? 0,
       })),
     );
+
+    const userWords = manager
+      .createQueryBuilder()
+      .insert()
+      .into(UserWord)
+      .values(
+        entries.map(({ id }) => ({ userId: book.userId, wordId: id, status })),
+      );
+    await (
+      status === WordStatus.KNOWN
+        ? userWords.orUpdate(['status'], ['userId', 'wordId'])
+        : userWords.orIgnore()
+    ).execute();
   }
 }
 
@@ -142,15 +206,8 @@ function toSummary(book: Book, uniqueWordCount: number): BookSummary {
     id: book.id,
     name: book.name,
     description: book.description,
-    status: book.status,
     wordCount: book.wordCount,
     uniqueWordCount,
     createdAt: book.createdAt.toISOString(),
   };
-}
-
-function topWords(counts: Map<string, number>, limit: number): WordCount[] {
-  return Array.from(counts, ([word, count]) => ({ word, count }))
-    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
-    .slice(0, limit);
 }

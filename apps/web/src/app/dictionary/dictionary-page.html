@@ -1,0 +1,84 @@
+<header class="page-header">
+  <h2>My dictionary</h2>
+  <mat-button-toggle-group
+    hideSingleSelectionIndicator
+    [value]="query().status"
+    (change)="setStatus($event.value)"
+    aria-label="Show words by status"
+  >
+    @for (status of statuses; track status) {
+      <mat-button-toggle [value]="status">
+        <mat-icon>{{ icons[status] }}</mat-icon>
+        {{ labels[status] }}
+      </mat-button-toggle>
+    }
+  </mat-button-toggle-group>
+</header>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <div class="error" role="alert">
+    <mat-icon>error</mat-icon>
+    <span>{{ message }}</span>
+    <button mat-button (click)="retry()">Retry</button>
+  </div>
+}
+
+@if (items().length) {
+  <p class="summary">
+    {{ total() | number }} {{ labels[query().status].toLowerCase() }}
+    {{ total() === 1 ? 'word' : 'words' }}, most used first.
+  </p>
+  <ol class="words">
+    @for (word of items(); track word.wordId; let i = $index) {
+      <li>
+        <span class="rank">{{ rank(i) }}</span>
+        <button
+          type="button"
+          class="word"
+          (click)="open(word)"
+          [attr.aria-label]="'Show details for ' + word.word"
+        >
+          {{ word.word }}
+        </button>
+        <span class="usage">
+          {{ word.count | number }} {{ word.count === 1 ? 'use' : 'uses' }} ·
+          {{ word.bookCount }} {{ word.bookCount === 1 ? 'book' : 'books' }}
+        </span>
+        <span class="actions">
+          @for (status of otherStatuses(word.status); track status) {
+            <!-- The accessible name starts with the visible label. -->
+            <button
+              [matButton]="status === learning ? 'filled' : 'outlined'"
+              type="button"
+              [class.learn]="status === learning"
+              [disabled]="pending().includes(word.wordId)"
+              [attr.aria-label]="moveLabels[status] + ': ' + word.word"
+              (click)="move(word, status)"
+            >
+              <mat-icon>{{ icons[status] }}</mat-icon>
+              {{ moveLabels[status] }}
+            </button>
+          }
+        </span>
+      </li>
+    }
+  </ol>
+  <mat-paginator
+    [length]="total()"
+    [pageIndex]="shownQuery().page - 1"
+    [pageSize]="shownQuery().pageSize"
+    [pageSizeOptions]="pageSizes"
+    (page)="changePage($event)"
+    aria-label="Choose page"
+  />
+} @else if (!loading() && !error()) {
+  <div class="empty">
+    <mat-icon>{{ icons[query().status] }}</mat-icon>
+    <p>{{ emptyMessages[query().status] }}</p>
+    <a mat-stroked-button routerLink="/upload">Upload a book</a>
+  </div>
+}

@@ -1,8 +1,9 @@
-import { BookStatus } from '@fictulary/shared/models';
+import { WordStatus } from '@fictulary/shared/models';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager, FindOperator } from 'typeorm';
 import { BooksService } from './books.service';
 import { BookWord } from './entities/book-word.entity';
+import { UserWord } from '../dictionary/user-word.entity';
 import { Book } from './entities/book.entity';
 import { Word } from './entities/word.entity';
 
@@ -14,6 +15,7 @@ describe('BooksService', () => {
     into: jest.fn().mockReturnThis(),
     values: jest.fn().mockReturnThis(),
     orIgnore: jest.fn().mockReturnThis(),
+    orUpdate: jest.fn().mockReturnThis(),
     execute: jest.fn(),
   };
   const manager = {
@@ -43,7 +45,12 @@ describe('BooksService', () => {
   };
 
   const service = new BooksService(dataSource as unknown as DataSource);
-  const dto = { name: 'My book', description: '', status: BookStatus.READING };
+  const dto = {
+    name: 'My book',
+    description: '',
+    wordStatus: WordStatus.LEARNING,
+  };
+  const userId = 5;
 
   const queryBuilder = (result: unknown) => {
     const qb: Record<string, jest.Mock> = {};
@@ -52,6 +59,7 @@ describe('BooksService', () => {
       'select',
       'addSelect',
       'where',
+      'andWhere',
       'orderBy',
       'addOrderBy',
       'limit',
@@ -66,8 +74,19 @@ describe('BooksService', () => {
   beforeEach(() => jest.clearAllMocks());
 
   describe('create', () => {
+    const toLearn = [
+      { wordId: '1', word: 'be', count: '2', status: WordStatus.LEARNING },
+      { wordId: '2', word: 'cat', count: '2', status: WordStatus.UNKNOWN },
+    ];
+    let wordsQuery: Record<string, jest.Mock>;
+    beforeEach(() => {
+      wordsQuery = queryBuilder(toLearn);
+      bookWordRepo.createQueryBuilder.mockReturnValue(wordsQuery);
+    });
+
     it('saves the book, adds words to the dictionary and links counts', async () => {
       const result = await service.create(
+        userId,
         dto,
         'The cat was here. Cats were there.',
       );
@@ -76,24 +95,29 @@ describe('BooksService', () => {
         id: 7,
         name: 'My book',
         description: null,
-        status: BookStatus.READING,
         wordCount: 7,
         uniqueWordCount: 5,
         createdAt: '2026-09-01T10:00:00.000Z',
+        // Read back from the user's dictionary after saving.
         words: [
-          { word: 'be', count: 2 },
-          { word: 'cat', count: 2 },
-          { word: 'here', count: 1 },
-          { word: 'the', count: 1 },
-          { word: 'there', count: 1 },
+          { wordId: '1', word: 'be', count: 2, status: WordStatus.LEARNING },
+          { wordId: '2', word: 'cat', count: 2, status: WordStatus.UNKNOWN },
         ],
       });
+      expect(wordsQuery.where).toHaveBeenCalledWith(
+        'bookWord.bookId = :bookId',
+        {
+          bookId: 7,
+        },
+      );
 
       expect(insertBuilder.into).toHaveBeenCalledWith(Word);
       expect(insertBuilder.values).toHaveBeenCalledWith(
         expect.arrayContaining([{ word: 'cat' }, { word: 'be' }]),
       );
-      expect(insertBuilder.orIgnore).toHaveBeenCalled();
+      expect(manager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 5 }),
+      );
       expect(manager.insert).toHaveBeenCalledWith(
         BookWord,
         expect.arrayContaining([
@@ -101,15 +125,42 @@ describe('BooksService', () => {
           { bookId: 7, wordId: 'be#', count: 2 },
         ]),
       );
+
+      // New words join the uploader's dictionary; existing ones are kept.
+      expect(insertBuilder.into).toHaveBeenCalledWith(UserWord);
+      expect(insertBuilder.values).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          { userId: 5, wordId: 'cat#', status: WordStatus.LEARNING },
+        ]),
+      );
+      expect(insertBuilder.orIgnore).toHaveBeenCalledTimes(2);
+      expect(insertBuilder.orUpdate).not.toHaveBeenCalled();
     });
 
-    it('limits the result to the top 100 words', async () => {
+    it('marks every word KNOWN, even existing ones, for a book that was read', async () => {
+      await service.create(
+        userId,
+        { ...dto, wordStatus: WordStatus.KNOWN },
+        'The cat was here.',
+      );
+      expect(insertBuilder.values).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          { userId: 5, wordId: 'cat#', status: WordStatus.KNOWN },
+        ]),
+      );
+      expect(insertBuilder.orUpdate).toHaveBeenCalledWith(
+        ['status'],
+        ['userId', 'wordId'],
+      );
+    });
+
+    it('counts all distinct words, not just the ones left to learn', async () => {
       const text = Array.from({ length: 150 }, (_, i) =>
         'x'.repeat(i + 1),
       ).join(' ');
-      const result = await service.create(dto, text);
-      expect(result.words).toHaveLength(100);
+      const result = await service.create(userId, dto, text);
       expect(result.uniqueWordCount).toBe(150);
+      expect(wordsQuery.limit).toHaveBeenCalledWith(100);
     });
 
     it('processes words in chunks', async () => {
@@ -121,16 +172,17 @@ describe('BooksService', () => {
             .toString(26)
             .replace(/./g, (d) => String.fromCharCode(97 + parseInt(d, 26)))}`,
       ).join(' ');
-      await service.create(dto, text);
-      expect(insertBuilder.execute).toHaveBeenCalledTimes(3);
+      await service.create(userId, dto, text);
+      // Dictionary words and the user's words, per chunk.
+      expect(insertBuilder.execute).toHaveBeenCalledTimes(6);
       expect(manager.insert).toHaveBeenCalledTimes(3);
       expect(manager.insert.mock.calls[0][1]).toHaveLength(1000);
     });
 
     it('rejects text without words', async () => {
-      await expect(service.create(dto, '42 !!!')).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.create(userId, dto, '42 !!!'),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(dataSource.transaction).not.toHaveBeenCalled();
     });
   });
@@ -140,38 +192,51 @@ describe('BooksService', () => {
       id: 3,
       name: 'Tale',
       description: 'Classic',
-      status: BookStatus.READ,
       wordCount: 10,
       createdAt,
     };
 
-    it('returns the book with its top words', async () => {
+    it('returns the book with its top words still to learn', async () => {
       bookRepo.findOneBy.mockResolvedValue(book);
       // Raw query rows return bigint counts as strings.
       const qb = queryBuilder([
-        { word: 'be', count: '6' },
-        { word: 'cat', count: '4' },
+        { wordId: '1', word: 'be', count: '6', status: WordStatus.LEARNING },
+        { wordId: '2', word: 'cat', count: '4', status: WordStatus.UNKNOWN },
       ]);
       bookWordRepo.createQueryBuilder.mockReturnValue(qb);
       bookWordRepo.countBy.mockResolvedValue(2);
 
-      await expect(service.findOne(3)).resolves.toEqual({
+      await expect(service.findOne(userId, 3)).resolves.toEqual({
         ...book,
         createdAt: '2026-09-01T10:00:00.000Z',
         uniqueWordCount: 2,
         words: [
-          { word: 'be', count: 6 },
-          { word: 'cat', count: 4 },
+          { wordId: '1', word: 'be', count: 6, status: WordStatus.LEARNING },
+          { wordId: '2', word: 'cat', count: 4, status: WordStatus.UNKNOWN },
         ],
       });
-      expect(qb.where).toHaveBeenCalledWith('bookWord.bookId = :id', { id: 3 });
+      expect(qb.where).toHaveBeenCalledWith('bookWord.bookId = :bookId', {
+        bookId: 3,
+      });
+      // Only the reader's own statuses, and never known words.
+      expect(qb.innerJoin).toHaveBeenCalledWith(
+        UserWord,
+        'userWord',
+        'userWord.wordId = bookWord.wordId AND userWord.userId = :userId',
+        { userId: 5 },
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'userWord.status IN (:...statuses)',
+        { statuses: [WordStatus.LEARNING, WordStatus.UNKNOWN] },
+      );
       expect(qb.limit).toHaveBeenCalledWith(100);
       expect(bookWordRepo.countBy).toHaveBeenCalledWith({ bookId: 3 });
+      expect(bookRepo.findOneBy).toHaveBeenCalledWith({ id: 3, userId: 5 });
     });
 
     it('throws when the book does not exist', async () => {
       bookRepo.findOneBy.mockResolvedValue(null);
-      await expect(service.findOne(404)).rejects.toBeInstanceOf(
+      await expect(service.findOne(userId, 404)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -182,7 +247,6 @@ describe('BooksService', () => {
       const summary = {
         name: 'Tale',
         description: null,
-        status: BookStatus.NOT_READ,
         wordCount: 10,
       };
       bookRepo.find.mockResolvedValue([
@@ -194,7 +258,7 @@ describe('BooksService', () => {
         queryBuilder([{ bookId: 2, count: '4' }]),
       );
 
-      await expect(service.findAll()).resolves.toEqual([
+      await expect(service.findAll(userId)).resolves.toEqual([
         {
           id: 2,
           ...summary,
@@ -209,6 +273,7 @@ describe('BooksService', () => {
         },
       ]);
       expect(bookRepo.find).toHaveBeenCalledWith({
+        where: { userId: 5 },
         order: { createdAt: 'DESC', id: 'DESC' },
       });
     });

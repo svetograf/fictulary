@@ -1,7 +1,7 @@
 import {
   BOOK_DESCRIPTION_MAX_LENGTH,
   BOOK_NAME_MAX_LENGTH,
-  BookStatus,
+  WordStatus,
 } from '@fictulary/shared/models';
 import { Transform } from 'class-transformer';
 import {
@@ -28,6 +28,7 @@ export class CreateBookDto {
   @MaxLength(BOOK_DESCRIPTION_MAX_LENGTH)
   description?: string;
 
-  @IsEnum(BookStatus)
-  status!: BookStatus;
+  /** Status for the book's words in the uploader's dictionary. */
+  @IsEnum(WordStatus)
+  wordStatus!: WordStatus;
 }

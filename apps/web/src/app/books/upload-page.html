@@ -92,17 +92,21 @@
       </mat-form-field>
 
       <div class="status">
-        <span id="status-label" class="status-label">Status</span>
+        <span id="status-label" class="status-label">Have you read it?</span>
         <mat-button-toggle-group
-          formControlName="status"
+          formControlName="wordStatus"
           aria-labelledby="status-label"
+          aria-describedby="status-hint"
         >
-          @for (status of statuses; track status) {
-            <mat-button-toggle [value]="status">
-              {{ statusLabels[status] }}
+          @for (option of readingOptions; track option.status) {
+            <mat-button-toggle [value]="option.status">
+              {{ option.label }}
             </mat-button-toggle>
           }
         </mat-button-toggle-group>
+        <p id="status-hint" class="status-hint">
+          {{ readingHint(controls.wordStatus.value) }}
+        </p>
       </div>
 
       <div class="actions">

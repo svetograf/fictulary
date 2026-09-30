@@ -17,12 +17,12 @@ import {
   BOOK_DESCRIPTION_MAX_LENGTH,
   BOOK_FILE_MAX_SIZE,
   BOOK_NAME_MAX_LENGTH,
-  BookStatus,
+  WordStatus,
 } from '@fictulary/shared/models';
 import { RouterLink } from '@angular/router';
 import { select } from '@ngxs/store';
 import { BookDetailsCard } from './book-details-card';
-import { BOOK_STATUS_LABELS } from './book-status';
+import { READING_OPTIONS } from './reading-status';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 import { notBlank } from '../shared/validators';
@@ -59,8 +59,9 @@ export class UploadPage {
     name: BOOK_NAME_MAX_LENGTH,
     description: BOOK_DESCRIPTION_MAX_LENGTH,
   };
-  protected readonly statuses = Object.values(BookStatus);
-  protected readonly statusLabels = BOOK_STATUS_LABELS;
+  protected readonly readingOptions = READING_OPTIONS;
+  protected readonly readingHint = (status: WordStatus) =>
+    READING_OPTIONS.find((option) => option.status === status)?.hint;
   protected readonly dragging = signal(false);
 
   protected readonly form = new FormGroup({
@@ -81,7 +82,7 @@ export class UploadPage {
       nonNullable: true,
       validators: [Validators.maxLength(BOOK_DESCRIPTION_MAX_LENGTH)],
     }),
-    status: new FormControl(BookStatus.NOT_READ, {
+    wordStatus: new FormControl(WordStatus.UNKNOWN, {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -130,13 +131,13 @@ export class UploadPage {
       this.form.markAllAsTouched();
       return;
     }
-    const { file, name, description, status } = this.form.getRawValue();
+    const { file, name, description, wordStatus } = this.form.getRawValue();
     if (file) {
       this.books.upload({
         file,
         name: name.trim(),
         description: description.trim(),
-        status,
+        wordStatus,
       });
     }
   }
