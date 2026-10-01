@@ -1,11 +1,12 @@
 import {
   BOOK_DESCRIPTION_MAX_LENGTH,
   BOOK_NAME_MAX_LENGTH,
+  READING_STATUSES,
   WordStatus,
 } from '@fictulary/shared/models';
 import { Transform } from 'class-transformer';
 import {
-  IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -29,6 +30,6 @@ export class CreateBookDto {
   description?: string;
 
   /** Status for the book's words in the uploader's dictionary. */
-  @IsEnum(WordStatus)
+  @IsIn(READING_STATUSES)
   wordStatus!: WordStatus;
 }

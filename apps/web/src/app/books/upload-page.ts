@@ -1,5 +1,13 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
@@ -26,7 +34,17 @@ import { READING_OPTIONS } from './reading-status';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 import { notBlank } from '../shared/validators';
-import { fileExtension, maxFileSize } from './file-validators';
+import {
+  fileExtension,
+  maxFileSize,
+  maxTextBytes,
+  utf8Bytes,
+} from './file-validators';
+
+type TextSource = 'file' | 'text';
+
+/** The backend accepts .txt uploads; pasted text is sent as one. */
+const PASTED_FILE_NAME = 'pasted-text.txt';
 
 @Component({
   selector: 'app-upload-page',
@@ -65,11 +83,21 @@ export class UploadPage {
   protected readonly dragging = signal(false);
 
   protected readonly form = new FormGroup({
+    /** Where the book's text comes from. */
+    source: new FormControl<TextSource>('file', { nonNullable: true }),
     file: new FormControl<File | null>(null, [
       Validators.required,
       fileExtension('.txt'),
       maxFileSize(BOOK_FILE_MAX_SIZE),
     ]),
+    text: new FormControl('', {
+      nonNullable: true,
+      validators: [
+        Validators.required,
+        notBlank,
+        maxTextBytes(BOOK_FILE_MAX_SIZE),
+      ],
+    }),
     name: new FormControl('', {
       nonNullable: true,
       validators: [
@@ -90,14 +118,27 @@ export class UploadPage {
 
   protected readonly controls = this.form.controls;
 
+  /** Pasted text size, as uploaded. */
+  protected readonly textKb = computed(
+    () => utf8Bytes(this.textValue()) / 1024,
+  );
+  private readonly textValue = toSignal(this.controls.text.valueChanges, {
+    initialValue: '',
+  });
+
   constructor() {
     effect(() => {
       if (this.uploading()) {
         this.form.disable();
       } else {
         this.form.enable();
+        this.syncSource();
       }
     });
+    this.controls.source.valueChanges
+      .pipe(takeUntilDestroyed(inject(DestroyRef)))
+      .subscribe(() => this.syncSource());
+    this.syncSource();
   }
 
   protected onFileInput(event: Event): void {
@@ -131,7 +172,19 @@ export class UploadPage {
       this.form.markAllAsTouched();
       return;
     }
-    const { file, name, description, wordStatus } = this.form.getRawValue();
+    const {
+      source,
+      file: chosen,
+      text,
+      name,
+      description,
+      wordStatus,
+    } = this.form.getRawValue();
+    // Pasted text goes through the same upload as a .txt file.
+    const file =
+      source === 'text'
+        ? new File([text], PASTED_FILE_NAME, { type: 'text/plain' })
+        : chosen;
     if (file) {
       this.books.upload({
         file,
@@ -140,6 +193,20 @@ export class UploadPage {
         wordStatus,
       });
     }
+  }
+
+  /** Only the active source is validated and submitted. */
+  private syncSource(): void {
+    // form.disable() during an upload also emits a source change; the whole
+    // form must stay disabled until the upload ends.
+    if (this.uploading()) {
+      return;
+    }
+    const { source, file, text } = this.controls;
+    const [active, inactive] =
+      source.value === 'file' ? [file, text] : [text, file];
+    active.enable({ emitEvent: false });
+    inactive.disable({ emitEvent: false });
   }
 
   private setFile(file: File | null): void {

@@ -8,7 +8,7 @@ import {
   BookDetails,
   BookSummary,
   DictionaryWord,
-  WordStatus,
+  WORDS_TO_LEARN_STATUSES,
 } from '@fictulary/shared/models';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
 import { patch } from '@ngxs/store/operators';
@@ -258,7 +258,8 @@ export class BooksState {
 
   /**
    * Keeps the shown books' "words to learn" in step with the dictionary:
-   * a word marked known leaves the list, other changes update its status.
+   * a word that's no longer to learn leaves the list, other changes update
+   * its status.
    */
   @Action([ChangeWordStatusSuccess, MarkWordViewedSuccess])
   wordStatusChanged(
@@ -303,7 +304,8 @@ function withWordStatus(
   return {
     ...book,
     words:
-      changed.status === WordStatus.KNOWN
+      // Known, Name and Trash words aren't "to learn": drop them.
+      !WORDS_TO_LEARN_STATUSES.includes(changed.status)
         ? book.words.filter((w) => w.wordId !== changed.wordId)
         : book.words.map((w) =>
             w.wordId === changed.wordId ? { ...w, status: changed.status } : w,

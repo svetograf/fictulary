@@ -133,7 +133,21 @@
     grid-column: 2;
   }
 
+  .actions {
+    flex-wrap: wrap;
+  }
+
   .actions button {
-    flex: 1;
+    flex: 1 1 auto;
+    white-space: nowrap;
+  }
+
+  // Icons only: five labelled statuses don't fit.
+  .page-header .label {
+    display: none;
+  }
+
+  .page-header mat-icon {
+    margin-right: 0;
   }
 }

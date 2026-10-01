@@ -137,7 +137,7 @@ describe('BooksService', () => {
       expect(insertBuilder.orUpdate).not.toHaveBeenCalled();
     });
 
-    it('marks every word KNOWN, even existing ones, for a book that was read', async () => {
+    it('marks words KNOWN, upgrading ones still to learn, for a book that was read', async () => {
       await service.create(
         userId,
         { ...dto, wordStatus: WordStatus.KNOWN },
@@ -148,9 +148,18 @@ describe('BooksService', () => {
           { userId: 5, wordId: 'cat#', status: WordStatus.KNOWN },
         ]),
       );
+      // Only words still to learn are upgraded: Trash and Name stay put.
       expect(insertBuilder.orUpdate).toHaveBeenCalledWith(
         ['status'],
         ['userId', 'wordId'],
+        {
+          overwriteCondition: {
+            where: '"user_words"."status" IN (:...upgradable)',
+            parameters: {
+              upgradable: [WordStatus.LEARNING, WordStatus.UNKNOWN],
+            },
+          },
+        },
       );
     });
 

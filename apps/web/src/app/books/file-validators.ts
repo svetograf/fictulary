@@ -17,3 +17,17 @@ export function fileExtension(extension: string): ValidatorFn {
       : null;
   };
 }
+
+/** Limits text by its UTF-8 size, the size it has once uploaded. */
+export function maxTextBytes(maxBytes: number): ValidatorFn {
+  return (control: AbstractControl<string>): ValidationErrors | null => {
+    const bytes = utf8Bytes(control.value ?? '');
+    return bytes > maxBytes
+      ? { maxTextBytes: { maxBytes, actualBytes: bytes } }
+      : null;
+  };
+}
+
+export function utf8Bytes(text: string): number {
+  return new TextEncoder().encode(text).length;
+}

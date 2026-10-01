@@ -1,9 +1,26 @@
-/** How well a user knows a word. */
+/** How well a user knows a word, or why it isn't worth learning. */
 export enum WordStatus {
   KNOWN = 'KNOWN',
   LEARNING = 'LEARNING',
   UNKNOWN = 'UNKNOWN',
+  /** Not a real word: a typo or a word cut off by mistake. */
+  TRASH = 'TRASH',
+  /** Used as the name of a person or place. */
+  NAME = 'NAME',
 }
+
+/** Statuses an upload can give a book's words ("have you read it?"). */
+export const READING_STATUSES: readonly WordStatus[] = [
+  WordStatus.KNOWN,
+  WordStatus.LEARNING,
+  WordStatus.UNKNOWN,
+];
+
+/** Words shown in a book's "words to learn"; others are left out. */
+export const WORDS_TO_LEARN_STATUSES: readonly WordStatus[] = [
+  WordStatus.LEARNING,
+  WordStatus.UNKNOWN,
+];
 
 export const DICTIONARY_DEFAULT_PAGE_SIZE = 50;
 export const DICTIONARY_MAX_PAGE_SIZE = 100;

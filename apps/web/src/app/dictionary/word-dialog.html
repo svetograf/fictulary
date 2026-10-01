@@ -1,11 +1,55 @@
 @if (word(); as current) {
-  <h2 mat-dialog-title class="title">
-    <span class="word">{{ current.word }}</span>
-    <span class="status" [attr.data-status]="current.status">
-      <mat-icon inline>{{ icons[current.status] }}</mat-icon>
-      {{ labels[current.status] }}
-    </span>
-  </h2>
+  <div class="header">
+    <h2 mat-dialog-title class="title">
+      <span class="word">{{ current.word }}</span>
+      <button
+        type="button"
+        class="status"
+        [attr.data-status]="current.status"
+        [matMenuTriggerFor]="statusMenu"
+        [disabled]="pending().includes(current.wordId)"
+        [attr.aria-label]="
+          'Status: ' + labels[current.status] + '. Change status'
+        "
+      >
+        <mat-icon inline>{{ icons[current.status] }}</mat-icon>
+        {{ labels[current.status] }}
+        <mat-icon inline class="caret">arrow_drop_down</mat-icon>
+      </button>
+    </h2>
+    <mat-menu #statusMenu="matMenu">
+      @for (status of statuses; track status) {
+        @if (status === setAside[0]) {
+          <!-- Below: words not worth learning. -->
+          <mat-divider />
+        }
+        <button
+          mat-menu-item
+          type="button"
+          [attr.aria-current]="status === current.status ? 'true' : null"
+          (click)="setStatus(current, status)"
+        >
+          <mat-icon>{{ icons[status] }}</mat-icon>
+          <span>{{ labels[status] }}</span>
+          @if (status === current.status) {
+            <!-- Wrapped: menu items move top-level icons to the front. -->
+            <span class="selected"
+              ><mat-icon aria-hidden="true">check</mat-icon></span
+            >
+          }
+        </button>
+      }
+    </mat-menu>
+    <button
+      mat-icon-button
+      type="button"
+      class="close"
+      mat-dialog-close
+      aria-label="Close"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
   <mat-dialog-content>
     <section aria-labelledby="definition-heading">
@@ -94,22 +138,28 @@
     </section>
   </mat-dialog-content>
 
-  <mat-dialog-actions>
-    @for (status of otherStatuses(current.status); track status) {
+  <mat-dialog-actions align="end">
+    @if (current.status === learning) {
       <button
-        mat-stroked-button
+        mat-flat-button
         type="button"
+        class="know"
         [disabled]="pending().includes(current.wordId)"
-        (click)="move(current.wordId, status)"
+        (click)="markKnownAndNext(current)"
       >
-        <mat-icon>{{ icons[status] }}</mat-icon>
-        Mark {{ labels[status].toLowerCase() }}
+        <mat-icon>task_alt</mat-icon>
+        I know!
       </button>
     }
-    <span class="spacer"></span>
-    <button mat-flat-button type="button" mat-dialog-close>
-      <mat-icon>check</mat-icon>
-      Got it
+    <button
+      mat-flat-button
+      type="button"
+      class="next"
+      [disabled]="!nextWord()"
+      (click)="next()"
+    >
+      Next
+      <mat-icon iconPositionEnd>arrow_forward</mat-icon>
     </button>
   </mat-dialog-actions>
 }

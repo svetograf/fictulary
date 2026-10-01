@@ -8,61 +8,102 @@
 
   <mat-card-content>
     <form [formGroup]="form" (ngSubmit)="submit()" class="upload-form">
-      <div
-        class="drop-zone"
-        role="button"
-        tabindex="0"
-        aria-label="Choose a .txt file or drop it here"
-        [class.dragging]="dragging()"
-        [class.invalid]="controls.file.invalid && controls.file.touched"
-        [class.disabled]="form.disabled"
-        (click)="fileInput.click()"
-        (keydown.enter)="fileInput.click()"
-        (keydown.space)="$event.preventDefault(); fileInput.click()"
-        (dragover)="onDragOver($event)"
-        (dragleave)="dragging.set(false)"
-        (drop)="onDrop($event)"
+      <mat-button-toggle-group
+        formControlName="source"
+        hideSingleSelectionIndicator
+        aria-label="Where the text comes from"
+        class="source"
       >
-        <input
-          #fileInput
-          type="file"
-          accept=".txt,text/plain"
-          hidden
-          [disabled]="form.disabled"
-          (change)="onFileInput($event)"
-        />
-        @if (controls.file.value; as selected) {
-          <mat-icon>description</mat-icon>
-          <span class="file-name">{{ selected.name }}</span>
-          <span class="file-size"
-            >{{ selected.size / 1024 | number: '1.0-1' }} KB</span
-          >
-          <button
-            mat-icon-button
-            type="button"
-            aria-label="Remove file"
-            [disabled]="form.disabled"
-            (click)="$event.stopPropagation(); clearFile()"
-          >
-            <mat-icon>close</mat-icon>
-          </button>
-        } @else {
+        <mat-button-toggle value="file">
           <mat-icon>upload_file</mat-icon>
-          <span>Drop a .txt file here or <strong>browse</strong></span>
-          <span class="file-size">Up to {{ limits.fileSizeMb }} MB</span>
+          From a file
+        </mat-button-toggle>
+        <mat-button-toggle value="text">
+          <mat-icon>content_paste</mat-icon>
+          Paste text
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @if (controls.source.value === 'file') {
+        <div
+          class="drop-zone"
+          role="button"
+          tabindex="0"
+          aria-label="Choose a .txt file or drop it here"
+          [class.dragging]="dragging()"
+          [class.invalid]="controls.file.invalid && controls.file.touched"
+          [class.disabled]="form.disabled"
+          (click)="fileInput.click()"
+          (keydown.enter)="fileInput.click()"
+          (keydown.space)="$event.preventDefault(); fileInput.click()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="dragging.set(false)"
+          (drop)="onDrop($event)"
+        >
+          <input
+            #fileInput
+            type="file"
+            accept=".txt,text/plain"
+            hidden
+            [disabled]="form.disabled"
+            (change)="onFileInput($event)"
+          />
+          @if (controls.file.value; as selected) {
+            <mat-icon>description</mat-icon>
+            <span class="file-name">{{ selected.name }}</span>
+            <span class="file-size"
+              >{{ selected.size / 1024 | number: '1.0-1' }} KB</span
+            >
+            <button
+              mat-icon-button
+              type="button"
+              aria-label="Remove file"
+              [disabled]="form.disabled"
+              (click)="$event.stopPropagation(); clearFile()"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          } @else {
+            <mat-icon>upload_file</mat-icon>
+            <span>Drop a .txt file here or <strong>browse</strong></span>
+            <span class="file-size">Up to {{ limits.fileSizeMb }} MB</span>
+          }
+        </div>
+        @if (controls.file.touched) {
+          @if (controls.file.hasError('required')) {
+            <mat-error>Please choose a file.</mat-error>
+          } @else if (controls.file.hasError('fileExtension')) {
+            <mat-error>Only .txt files are supported.</mat-error>
+          } @else if (controls.file.hasError('maxFileSize')) {
+            <mat-error
+              >File must be {{ limits.fileSizeMb }} MB or smaller.</mat-error
+            >
+          }
         }
-      </div>
-      @if (controls.file.touched) {
-        @if (controls.file.hasError('required')) {
-          <mat-error>Please choose a file.</mat-error>
-        } @else if (controls.file.hasError('fileExtension')) {
-          <mat-error>Only .txt files are supported.</mat-error>
-        } @else if (controls.file.hasError('maxFileSize')) {
-          <mat-error
-            >File must be {{ limits.fileSizeMb }} MB or smaller.</mat-error
+      } @else {
+        <mat-form-field class="text">
+          <mat-label>Book text</mat-label>
+          <textarea
+            matInput
+            formControlName="text"
+            rows="10"
+            required
+            placeholder="Paste the text of the book here"
+          ></textarea>
+          <mat-hint align="end"
+            >{{ textKb() | number: '1.0-1' }} KB /
+            {{ limits.fileSizeMb }} MB</mat-hint
           >
-        }
+          @if (controls.text.hasError('required')) {
+            <mat-error>Please paste some text.</mat-error>
+          } @else if (controls.text.hasError('maxTextBytes')) {
+            <mat-error
+              >Text must be {{ limits.fileSizeMb }} MB or smaller.</mat-error
+            >
+          }
+        </mat-form-field>
       }
+
       <mat-form-field>
         <mat-label>Book name</mat-label>
         <input matInput formControlName="name" required />

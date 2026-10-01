@@ -12,6 +12,10 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import {
   DICTIONARY_DEFAULT_PAGE_SIZE,
@@ -33,11 +37,17 @@ import {
 
 export const PAGE_SIZES = [25, 50, 100];
 
+/** Keep in sync with the media query in dictionary-page.scss. */
+const COMPACT_FILTER_QUERY = '(max-width: 640px)';
+
 /** Row button labels: what the user says about the word. */
 const MOVE_LABELS: Record<WordStatus, string> = {
   [WordStatus.KNOWN]: 'I know',
   [WordStatus.LEARNING]: 'Learn',
   [WordStatus.UNKNOWN]: 'Unknown',
+  // Not offered as quick buttons (see otherStatuses).
+  [WordStatus.NAME]: 'Name',
+  [WordStatus.TRASH]: 'Trash',
 };
 
 const EMPTY_MESSAGES: Record<WordStatus, string> = {
@@ -47,6 +57,10 @@ const EMPTY_MESSAGES: Record<WordStatus, string> = {
     'Nothing to learn yet. Words you look up or mark as learning show up here.',
   [WordStatus.UNKNOWN]:
     'No unknown words. Upload a book you have not read yet.',
+  [WordStatus.NAME]:
+    'No names yet. Open a word and set its status to Name if it names a person or place.',
+  [WordStatus.TRASH]:
+    'Trash is empty. Open a word and set its status to Trash if it is a typo or cut off.',
 };
 
 @Component({
@@ -59,6 +73,7 @@ const EMPTY_MESSAGES: Record<WordStatus, string> = {
     MatIconModule,
     MatPaginatorModule,
     MatProgressBarModule,
+    MatTooltipModule,
   ],
   templateUrl: './dictionary-page.html',
   styleUrl: './dictionary-page.scss',
@@ -66,7 +81,16 @@ const EMPTY_MESSAGES: Record<WordStatus, string> = {
 export class DictionaryPage {
   private readonly dictionary = inject(DictionaryService);
   private readonly router = inject(Router);
-  protected readonly open = injectWordDialog();
+  /** "Next" in the dialog walks through the words on this page. */
+  protected readonly open = injectWordDialog(() => this.items());
+
+  /** Narrow screens show the status filter as icons only. */
+  protected readonly compact = toSignal(
+    inject(BreakpointObserver)
+      .observe(COMPACT_FILTER_QUERY)
+      .pipe(map((state) => state.matches)),
+    { initialValue: false },
+  );
 
   // Bound from the query string, so filters survive reloads and back/forward.
   readonly status = input<string>();

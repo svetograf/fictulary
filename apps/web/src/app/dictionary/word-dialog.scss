@@ -1,4 +1,13 @@
+@use '@angular/material' as mat;
+
+.header {
+  display: flex;
+  align-items: flex-start;
+}
+
 .title {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -13,8 +22,10 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 10px;
+  padding: 2px 4px 2px 10px;
+  border: 0;
   border-radius: 999px;
+  cursor: pointer;
   font: var(--mat-sys-label-large);
   background: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
@@ -27,6 +38,37 @@
   &[data-status='UNKNOWN'] {
     background: var(--mat-sys-surface-container-highest);
     color: var(--mat-sys-on-surface-variant);
+  }
+
+  &[data-status='NAME'] {
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+
+  &[data-status='TRASH'] {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.selected {
+  display: inline-flex;
+  margin-left: 16px;
+  vertical-align: middle;
+
+  mat-icon {
+    margin: 0;
   }
 }
 
@@ -118,6 +160,23 @@ mat-dialog-actions {
   gap: 8px;
 }
 
-.spacer {
-  flex: 1;
+.close {
+  flex: none;
+  margin: 8px 8px 0 0;
+}
+
+// Accent (tertiary) color, like "Learn" on My dictionary.
+.know {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-tertiary),
+      filled-label-text-color: var(--mat-sys-on-tertiary),
+      filled-state-layer-color: var(--mat-sys-on-tertiary),
+      filled-ripple-color: color-mix(
+          in srgb,
+          var(--mat-sys-on-tertiary) 12%,
+          transparent
+        ),
+    )
+  );
 }

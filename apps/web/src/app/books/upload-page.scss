@@ -11,6 +11,20 @@
   padding-top: 16px;
 }
 
+.source {
+  align-self: flex-start;
+  margin-bottom: 8px;
+
+  mat-icon {
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+}
+
+.text textarea {
+  min-height: 12em;
+}
+
 .drop-zone {
   display: flex;
   align-items: center;

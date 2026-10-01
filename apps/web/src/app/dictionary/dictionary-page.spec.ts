@@ -83,11 +83,17 @@ describe('DictionaryPage', () => {
   it('switches status through the header filter', async () => {
     await harness.navigateByUrl('/my-dictionary?page=4', DictionaryPage);
     const toggles = element().querySelectorAll('mat-button-toggle button');
-    expect([...toggles].map((t) => t.textContent?.trim())).toEqual([
-      'task_alt Known',
-      'school Learning',
-      'help_outline Unknown',
+    // Named for screen readers even when narrow screens hide the labels.
+    expect([...toggles].map((t) => t.getAttribute('aria-label'))).toEqual([
+      'Known',
+      'Learning',
+      'Unknown',
+      'Name',
+      'Trash',
     ]);
+    expect(
+      [...toggles].map((t) => t.querySelector('mat-icon')?.textContent),
+    ).toEqual(['task_alt', 'school', 'help_outline', 'badge', 'delete']);
 
     (toggles[2] as HTMLButtonElement).click();
     await harness.fixture.whenStable();
@@ -171,5 +177,37 @@ describe('DictionaryPage', () => {
     expect(element().querySelector('.empty')?.textContent).toContain(
       'Nothing to learn yet',
     );
+  });
+
+  it.each([
+    [WordStatus.NAME, 'No names yet'],
+    [WordStatus.TRASH, 'Trash is empty'],
+  ])('lists %s words', async (status, emptyText) => {
+    await harness.navigateByUrl(
+      `/my-dictionary?status=${status}`,
+      DictionaryPage,
+    );
+    expect(dictionary.load).toHaveBeenLastCalledWith({
+      status,
+      page: 1,
+      pageSize: 50,
+    });
+
+    await show([], 0);
+    expect(element().querySelector('.empty')?.textContent).toContain(emptyText);
+  });
+
+  it('offers only the learning statuses as quick buttons, even in Trash', async () => {
+    await harness.navigateByUrl('/my-dictionary?status=TRASH', DictionaryPage);
+    await show([word('1', WordStatus.TRASH)], 1);
+
+    const labels = [
+      ...element().querySelectorAll('.words li .actions button'),
+    ].map((b) => b.textContent?.replace(/\s+/g, ' ').trim());
+    expect(labels).toEqual([
+      'task_alt I know',
+      'school Learn',
+      'help_outline Unknown',
+    ]);
   });
 });

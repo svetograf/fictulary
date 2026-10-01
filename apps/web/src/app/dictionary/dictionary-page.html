@@ -7,9 +7,16 @@
     aria-label="Show words by status"
   >
     @for (status of statuses; track status) {
-      <mat-button-toggle [value]="status">
+      <!-- Labels hide on narrow screens; the name stays for screen readers
+           and as a hover hint. -->
+      <mat-button-toggle
+        [value]="status"
+        [aria-label]="labels[status]"
+        [matTooltip]="labels[status]"
+        [matTooltipDisabled]="!compact()"
+      >
         <mat-icon>{{ icons[status] }}</mat-icon>
-        {{ labels[status] }}
+        <span class="label">{{ labels[status] }}</span>
       </mat-button-toggle>
     }
   </mat-button-toggle-group>

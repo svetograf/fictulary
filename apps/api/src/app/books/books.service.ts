@@ -2,6 +2,7 @@ import {
   BOOK_TOP_WORDS_LIMIT,
   BookDetails,
   BookSummary,
+  WORDS_TO_LEARN_STATUSES,
   WordCount,
   WordStatus,
 } from '@fictulary/shared/models';
@@ -128,7 +129,7 @@ export class BooksService {
       .addSelect('userWord.status', 'status')
       .where('bookWord.bookId = :bookId', { bookId })
       .andWhere('userWord.status IN (:...statuses)', {
-        statuses: [WordStatus.LEARNING, WordStatus.UNKNOWN],
+        statuses: WORDS_TO_LEARN_STATUSES,
       })
       .orderBy('bookWord.count', 'DESC')
       .addOrderBy('word.word', 'ASC')
@@ -152,7 +153,8 @@ export class BooksService {
 /**
  * Adds any new words to the shared dictionary, links them to the book with
  * their counts, and adds them to the owner's dictionary: words new to it get
- * `status`; KNOWN (the book was read) also upgrades words already there.
+ * `status`; KNOWN (the book was read) also upgrades words already there that
+ * are still to learn.
  */
 async function saveWordCounts(
   manager: EntityManager,
@@ -195,7 +197,14 @@ async function saveWordCounts(
       );
     await (
       status === WordStatus.KNOWN
-        ? userWords.orUpdate(['status'], ['userId', 'wordId'])
+        ? // Only upgrade words still being learned: words the user put in
+          // Trash or Name stay there.
+          userWords.orUpdate(['status'], ['userId', 'wordId'], {
+            overwriteCondition: {
+              where: '"user_words"."status" IN (:...upgradable)',
+              parameters: { upgradable: WORDS_TO_LEARN_STATUSES },
+            },
+          })
         : userWords.orIgnore()
     ).execute();
   }

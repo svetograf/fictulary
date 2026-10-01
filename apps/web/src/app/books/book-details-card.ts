@@ -44,8 +44,8 @@ export class BookDetailsCard {
     'actions',
   ];
   protected readonly pending = select(DictionaryState.pendingWordIds);
-  /** The same word dialog as on My dictionary. */
-  protected readonly openWord = injectWordDialog();
+  /** The same word dialog as on My dictionary; "Next" walks this list. */
+  protected readonly openWord = injectWordDialog(() => this.book().words);
   protected readonly known = WordStatus.KNOWN;
   protected readonly learning = WordStatus.LEARNING;
   // Table rows are untyped in the template, hence functions over lookups.

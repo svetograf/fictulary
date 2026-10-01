@@ -276,6 +276,20 @@ describe('BooksState', () => {
       ).toBe(WordStatus.LEARNING);
     });
 
+    it.each([WordStatus.NAME, WordStatus.TRASH])(
+      'drops words set to %s from the shown books',
+      (status) => {
+        store.dispatch(
+          new ChangeWordStatusSuccess(dictionaryWord('2', status)),
+        );
+        expect(
+          store
+            .selectSnapshot(BooksState.currentBook)
+            ?.words.map((w) => w.wordId),
+        ).toEqual(['1']);
+      },
+    );
+
     it('ignores words that are not in the shown books', () => {
       const before = store.selectSnapshot(BooksState.currentBook);
       store.dispatch(
