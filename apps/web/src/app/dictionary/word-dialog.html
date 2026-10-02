@@ -52,6 +52,12 @@
   </div>
 
   <mat-dialog-content>
+    @if (nameHint(); as kinds) {
+      <p class="name-hint">
+        <mat-icon inline>badge</mat-icon>
+        Probably a name ({{ kinds }})
+      </p>
+    }
     <section aria-labelledby="definition-heading">
       <h3 id="definition-heading" class="visually-hidden">Definition</h3>
       @if (definitionLoading()) {

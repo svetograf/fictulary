@@ -3,6 +3,7 @@ import { BookWordsManyToMany1790694098096 } from './1790694098096-BookWordsManyT
 import { AddUsers1790697736113 } from './1790697736113-AddUsers';
 import { UserDictionary1790699755830 } from './1790699755830-UserDictionary';
 import { WordStatusTrashName1790860764256 } from './1790860764256-WordStatusTrashName';
+import { Names1790929028764 } from './1790929028764-Names';
 
 /**
  * All migrations, in order. The app is bundled with webpack, so migrations
@@ -15,4 +16,5 @@ export const migrations = [
   AddUsers1790697736113,
   UserDictionary1790699755830,
   WordStatusTrashName1790860764256,
+  Names1790929028764,
 ];

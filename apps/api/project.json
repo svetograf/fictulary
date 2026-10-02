@@ -91,6 +91,12 @@
         "command": "node -r ./apps/api/typeorm-cli.register.cjs node_modules/typeorm/cli.js migration:generate -d apps/api/src/data-source.ts --check apps/api/src/migrations/Pending",
         "forwardAllArgs": false
       }
+    },
+    "build-names-data": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node apps/api/tools/build-names-data.mjs"
+      }
     }
   }
 }

@@ -2,6 +2,7 @@ import {
   BOOK_TOP_WORDS_LIMIT,
   BookDetails,
   BookSummary,
+  UploadedBook,
   WORDS_TO_LEARN_STATUSES,
   WordCount,
   WordStatus,
@@ -17,14 +18,18 @@ import { CreateBookDto } from './dto/create-book.dto';
 import { BookWord } from './entities/book-word.entity';
 import { Book } from './entities/book.entity';
 import { Word } from './entities/word.entity';
-import { countWords } from './text/count-words';
+import { NamesService } from '../names/names.service';
+import { analyzeText, countWords, nameCandidates } from './text/count-words';
 
 /** Keeps each INSERT well below Postgres' 65535 bind-parameter limit. */
 const WORD_INSERT_CHUNK_SIZE = 1000;
 
 @Injectable()
 export class BooksService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly namesService: NamesService,
+  ) {}
 
   /** The user's books, newest first. */
   async findAll(userId: number): Promise<BookSummary[]> {
@@ -77,12 +82,16 @@ export class BooksService {
     userId: number,
     dto: CreateBookDto,
     text: string,
-  ): Promise<BookDetails> {
-    const { total, counts } = countWords(text);
-    if (total === 0) {
+  ): Promise<UploadedBook> {
+    const analysis = analyzeText(text);
+    if (analysis.total === 0) {
       throw new BadRequestException('File does not contain any words');
     }
+    // Words written like proper nouns that are also in the names list.
+    const names = await this.namesService.findNames(nameCandidates(analysis));
+    const { total, counts, names: nameWords } = countWords(analysis, names);
 
+    let markedAsNames: string[] = [];
     const book = await this.dataSource.transaction(async (manager) => {
       const saved = await manager.save(
         manager.create(Book, {
@@ -93,7 +102,13 @@ export class BooksService {
         }),
       );
 
-      await saveWordCounts(manager, saved, counts, dto.wordStatus);
+      markedAsNames = await saveWordCounts(
+        manager,
+        saved,
+        counts,
+        dto.wordStatus,
+        nameWords,
+      );
       return saved;
     });
 
@@ -102,6 +117,10 @@ export class BooksService {
     return {
       ...toSummary(book, counts.size),
       words: await this.wordsToLearn(userId, book.id),
+      markedAsNames: markedAsNames.sort(
+        (a, b) =>
+          (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || a.localeCompare(b),
+      ),
     };
   }
 
@@ -161,7 +180,9 @@ async function saveWordCounts(
   book: Book,
   counts: Map<string, number>,
   status: WordStatus,
-): Promise<void> {
+  names: ReadonlySet<string>,
+): Promise<string[]> {
+  const markedAsNames: string[] = [];
   const words = [...counts.keys()];
   for (let i = 0; i < words.length; i += WORD_INSERT_CHUNK_SIZE) {
     const chunk = words.slice(i, i + WORD_INSERT_CHUNK_SIZE);
@@ -188,26 +209,81 @@ async function saveWordCounts(
       })),
     );
 
-    const userWords = manager
-      .createQueryBuilder()
-      .insert()
-      .into(UserWord)
-      .values(
-        entries.map(({ id }) => ({ userId: book.userId, wordId: id, status })),
-      );
-    await (
-      status === WordStatus.KNOWN
-        ? // Only upgrade words still being learned: words the user put in
-          // Trash or Name stay there.
-          userWords.orUpdate(['status'], ['userId', 'wordId'], {
-            overwriteCondition: {
-              where: '"user_words"."status" IN (:...upgradable)',
-              parameters: { upgradable: WORDS_TO_LEARN_STATUSES },
-            },
-          })
-        : userWords.orIgnore()
-    ).execute();
+    const nameEntries = entries.filter(({ word }) => names.has(word));
+    const otherEntries = entries.filter(({ word }) => !names.has(word));
+    await saveUserWords(manager, book.userId, otherEntries, status);
+    markedAsNames.push(...(await saveNames(manager, book.userId, nameEntries)));
   }
+  return markedAsNames;
+}
+
+async function saveUserWords(
+  manager: EntityManager,
+  userId: number,
+  entries: Pick<Word, 'id' | 'word'>[],
+  status: WordStatus,
+): Promise<void> {
+  if (entries.length === 0) {
+    return;
+  }
+  const userWords = manager
+    .createQueryBuilder()
+    .insert()
+    .into(UserWord)
+    .values(entries.map(({ id }) => ({ userId, wordId: id, status })));
+  await (
+    status === WordStatus.KNOWN
+      ? // Only upgrade words still being learned: words the user put in
+        // Trash or Name stay there.
+        userWords.orUpdate(['status'], ['userId', 'wordId'], {
+          overwriteCondition: {
+            where: '"user_words"."status" IN (:...upgradable)',
+            parameters: { upgradable: WORDS_TO_LEARN_STATUSES },
+          },
+        })
+      : userWords.orIgnore()
+  ).execute();
+}
+
+/**
+ * Puts recognized names in the user's dictionary as NAME: words new to it,
+ * and words still UNKNOWN. Statuses the user chose are kept. Returns the
+ * words that were marked.
+ */
+async function saveNames(
+  manager: EntityManager,
+  userId: number,
+  entries: Pick<Word, 'id' | 'word'>[],
+): Promise<string[]> {
+  if (entries.length === 0) {
+    return [];
+  }
+  const result = await manager
+    .createQueryBuilder()
+    .insert()
+    .into(UserWord)
+    .values(
+      entries.map(({ id }) => ({
+        userId,
+        wordId: id,
+        status: WordStatus.NAME,
+      })),
+    )
+    .orUpdate(['status'], ['userId', 'wordId'], {
+      overwriteCondition: {
+        where: '"user_words"."status" = :unknown',
+        parameters: { unknown: WordStatus.UNKNOWN },
+      },
+    })
+    // Only inserted or updated rows come back.
+    .returning(['wordId'])
+    .execute();
+  const marked = new Set(
+    (result.raw as { wordId: string }[]).map(({ wordId }) => String(wordId)),
+  );
+  return entries
+    .filter(({ id }) => marked.has(String(id)))
+    .map(({ word }) => word);
 }
 
 function toSummary(book: Book, uniqueWordCount: number): BookSummary {

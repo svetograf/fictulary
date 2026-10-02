@@ -4,6 +4,7 @@ import { DataSource, EntityManager, FindOperator } from 'typeorm';
 import { BooksService } from './books.service';
 import { BookWord } from './entities/book-word.entity';
 import { UserWord } from '../dictionary/user-word.entity';
+import { NamesService } from '../names/names.service';
 import { Book } from './entities/book.entity';
 import { Word } from './entities/word.entity';
 
@@ -16,8 +17,12 @@ describe('BooksService', () => {
     values: jest.fn().mockReturnThis(),
     orIgnore: jest.fn().mockReturnThis(),
     orUpdate: jest.fn().mockReturnThis(),
-    execute: jest.fn(),
+    returning: jest.fn().mockReturnThis(),
+    execute: jest.fn(async (): Promise<{ raw: { wordId: string }[] }> => ({
+      raw: [],
+    })),
   };
+  const namesService = { findNames: jest.fn(async () => new Set<string>()) };
   const manager = {
     create: jest.fn((_entity, data) => data),
     save: jest.fn(async (book) => ({ id: 7, createdAt, ...book })),
@@ -44,7 +49,10 @@ describe('BooksService', () => {
     ),
   };
 
-  const service = new BooksService(dataSource as unknown as DataSource);
+  const service = new BooksService(
+    dataSource as unknown as DataSource,
+    namesService as unknown as NamesService,
+  );
   const dto = {
     name: 'My book',
     description: '',
@@ -103,6 +111,7 @@ describe('BooksService', () => {
           { wordId: '1', word: 'be', count: 2, status: WordStatus.LEARNING },
           { wordId: '2', word: 'cat', count: 2, status: WordStatus.UNKNOWN },
         ],
+        markedAsNames: [],
       });
       expect(wordsQuery.where).toHaveBeenCalledWith(
         'bookWord.bookId = :bookId',
@@ -161,6 +170,66 @@ describe('BooksService', () => {
           },
         },
       );
+    });
+
+    describe('names', () => {
+      const text = 'Tom saw the cat. Then Tom and Becky left. Will Becky stay?';
+
+      it('looks up words written like proper nouns', async () => {
+        await service.create(userId, dto, text);
+        // "Will" only starts a sentence, so it isn't a candidate.
+        expect(namesService.findNames).toHaveBeenCalledWith(['tom', 'becky']);
+      });
+
+      it('puts found names in the dictionary as NAME and reports them', async () => {
+        namesService.findNames.mockResolvedValueOnce(new Set(['tom', 'becky']));
+        // Postgres returns the rows it inserted or updated: Becky was
+        // already in the dictionary with a status the user chose.
+        insertBuilder.execute.mockImplementation(async () =>
+          insertBuilder.returning.mock.calls.length
+            ? { raw: [{ wordId: 'tom#' }] }
+            : { raw: [] },
+        );
+
+        const result = await service.create(userId, dto, text);
+
+        expect(insertBuilder.values).toHaveBeenCalledWith([
+          { userId: 5, wordId: 'tom#', status: WordStatus.NAME },
+          { userId: 5, wordId: 'becky#', status: WordStatus.NAME },
+        ]);
+        // Only words new to the dictionary or still Unknown become names.
+        expect(insertBuilder.orUpdate).toHaveBeenCalledWith(
+          ['status'],
+          ['userId', 'wordId'],
+          {
+            overwriteCondition: {
+              where: '"user_words"."status" = :unknown',
+              parameters: { unknown: WordStatus.UNKNOWN },
+            },
+          },
+        );
+        // Names don't get the upload's status.
+        expect(insertBuilder.values).not.toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              wordId: 'tom#',
+              status: WordStatus.LEARNING,
+            }),
+          ]),
+        );
+        expect(result.markedAsNames).toEqual(['tom']);
+        insertBuilder.execute.mockImplementation(async () => ({ raw: [] }));
+      });
+
+      it('keeps names as written in the counts', async () => {
+        namesService.findNames.mockResolvedValueOnce(new Set(['wales']));
+        await service.create(userId, dto, 'Then he sailed to Wales.');
+        // Lemmatizing would have stored "wale".
+        expect(manager.insert).toHaveBeenCalledWith(
+          BookWord,
+          expect.arrayContaining([{ bookId: 7, wordId: 'wales#', count: 1 }]),
+        );
+      });
     });
 
     it('counts all distinct words, not just the ones left to learn', async () => {

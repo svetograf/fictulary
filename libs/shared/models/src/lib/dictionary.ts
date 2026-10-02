@@ -22,6 +22,14 @@ export const WORDS_TO_LEARN_STATUSES: readonly WordStatus[] = [
   WordStatus.UNKNOWN,
 ];
 
+/** What a known name names. */
+export enum NameKind {
+  PERSON = 'PERSON',
+  CITY = 'CITY',
+  COUNTRY = 'COUNTRY',
+  LAKE = 'LAKE',
+}
+
 export const DICTIONARY_DEFAULT_PAGE_SIZE = 50;
 export const DICTIONARY_MAX_PAGE_SIZE = 100;
 
@@ -54,6 +62,8 @@ export interface WordBookUsage {
 export interface DictionaryWordDetails extends DictionaryWord {
   /** Per-book usage, most frequent first. */
   books: WordBookUsage[];
+  /** What the word names, if it's in the names list (may be several). */
+  nameKinds: NameKind[];
 }
 
 export interface UpdateWordStatusRequest {

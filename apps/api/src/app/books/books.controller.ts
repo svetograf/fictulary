@@ -2,6 +2,7 @@ import {
   BOOK_FILE_MAX_SIZE,
   BookDetails,
   BookSummary,
+  UploadedBook,
 } from '@fictulary/shared/models';
 import {
   Body,
@@ -55,7 +56,7 @@ export class BooksController {
     file: Express.Multer.File,
     @Body() dto: CreateBookDto,
     @CurrentUser() user: AuthUser,
-  ): Promise<BookDetails> {
+  ): Promise<UploadedBook> {
     return this.booksService.create(user.id, dto, file.buffer.toString('utf8'));
   }
 }

@@ -16,6 +16,7 @@ import {
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -30,7 +31,6 @@ import {
 import { RouterLink } from '@angular/router';
 import { select } from '@ngxs/store';
 import { BookDetailsCard } from './book-details-card';
-import { READING_OPTIONS } from './reading-status';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 import { notBlank } from '../shared/validators';
@@ -42,6 +42,9 @@ import {
 } from './file-validators';
 
 type TextSource = 'file' | 'text';
+
+/** Names listed in the notice after an upload; the rest are counted. */
+const NAMES_SHOWN = 12;
 
 /** The backend accepts .txt uploads; pasted text is sent as one. */
 const PASTED_FILE_NAME = 'pasted-text.txt';
@@ -55,6 +58,7 @@ const PASTED_FILE_NAME = 'pasted-text.txt';
     BookDetailsCard,
     MatButtonModule,
     MatButtonToggleModule,
+    MatCheckboxModule,
     MatCardModule,
     MatFormFieldModule,
     MatIconModule,
@@ -77,9 +81,6 @@ export class UploadPage {
     name: BOOK_NAME_MAX_LENGTH,
     description: BOOK_DESCRIPTION_MAX_LENGTH,
   };
-  protected readonly readingOptions = READING_OPTIONS;
-  protected readonly readingHint = (status: WordStatus) =>
-    READING_OPTIONS.find((option) => option.status === status)?.hint;
   protected readonly dragging = signal(false);
 
   protected readonly form = new FormGroup({
@@ -110,10 +111,11 @@ export class UploadPage {
       nonNullable: true,
       validators: [Validators.maxLength(BOOK_DESCRIPTION_MAX_LENGTH)],
     }),
-    wordStatus: new FormControl(WordStatus.UNKNOWN, {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
+    /**
+     * Checked: every word of the book becomes Known, including ones being
+     * learned. Unchecked: words new to the dictionary are added as Unknown.
+     */
+    allKnown: new FormControl(false, { nonNullable: true }),
   });
 
   protected readonly controls = this.form.controls;
@@ -178,7 +180,7 @@ export class UploadPage {
       text,
       name,
       description,
-      wordStatus,
+      allKnown,
     } = this.form.getRawValue();
     // Pasted text goes through the same upload as a .txt file.
     const file =
@@ -190,7 +192,7 @@ export class UploadPage {
         file,
         name: name.trim(),
         description: description.trim(),
-        wordStatus,
+        wordStatus: allKnown ? WordStatus.KNOWN : WordStatus.UNKNOWN,
       });
     }
   }
@@ -207,6 +209,15 @@ export class UploadPage {
       source.value === 'file' ? [file, text] : [text, file];
     active.enable({ emitEvent: false });
     inactive.disable({ emitEvent: false });
+  }
+
+  /** "Tom, Becky, … and 3 more": names are stored lowercase. */
+  protected namesSummary(names: string[]): string {
+    const shown = names
+      .slice(0, NAMES_SHOWN)
+      .map((name) => name.charAt(0).toUpperCase() + name.slice(1));
+    const more = names.length - shown.length;
+    return more > 0 ? `${shown.join(', ')} and ${more} more` : shown.join(', ');
   }
 
   private setFile(file: File | null): void {

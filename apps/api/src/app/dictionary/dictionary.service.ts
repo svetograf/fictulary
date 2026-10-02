@@ -7,6 +7,7 @@ import {
 } from '@fictulary/shared/models';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, SelectQueryBuilder } from 'typeorm';
+import { NamesService } from '../names/names.service';
 import { BookWord } from '../books/entities/book-word.entity';
 import { Book } from '../books/entities/book.entity';
 import { UserWord } from './user-word.entity';
@@ -21,7 +22,10 @@ interface RawDictionaryWord {
 
 @Injectable()
 export class DictionaryService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly namesService: NamesService,
+  ) {}
 
   /** The user's words in one status, most used across their books first. */
   async list(
@@ -68,7 +72,11 @@ export class DictionaryService {
       name: b.name,
       count: Number(b.count),
     }));
-    return { ...entry, books: usage };
+    return {
+      ...entry,
+      books: usage,
+      nameKinds: await this.namesService.kindsOf(entry.word),
+    };
   }
 
   async updateStatus(

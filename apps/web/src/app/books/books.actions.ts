@@ -1,4 +1,9 @@
-import { BookDetails, BookSummary, WordStatus } from '@fictulary/shared/models';
+import {
+  BookDetails,
+  BookSummary,
+  UploadedBook,
+  WordStatus,
+} from '@fictulary/shared/models';
 
 export interface UploadBookPayload {
   file: File;
@@ -49,7 +54,7 @@ export class UploadFileProgress {
 
 export class UploadFileSuccess {
   static readonly type = '[Books] UPLOAD_FILE_SUCCESS';
-  constructor(public readonly book: BookDetails) {}
+  constructor(public readonly book: UploadedBook) {}
 }
 
 export class UploadFileFail {

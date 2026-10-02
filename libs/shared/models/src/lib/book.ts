@@ -47,3 +47,12 @@ export interface UploadBookFields {
    */
   wordStatus: WordStatus;
 }
+
+/** The response to an upload: the processed book. */
+export interface UploadedBook extends BookDetails {
+  /**
+   * Words of the book that were put in the uploader's dictionary as names
+   * (found in the names list and capitalized in the text), most used first.
+   */
+  markedAsNames: string[];
+}

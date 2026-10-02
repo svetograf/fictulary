@@ -1,4 +1,8 @@
-import { READING_STATUSES, WordStatus } from '@fictulary/shared/models';
+import {
+  NameKind,
+  READING_STATUSES,
+  WordStatus,
+} from '@fictulary/shared/models';
 
 /** Every status, in the order filters and menus show them. */
 export const WORD_STATUSES = [
@@ -35,3 +39,11 @@ export const WORD_STATUS_ICONS: Record<WordStatus, string> = {
 export function otherStatuses(status: WordStatus): WordStatus[] {
   return READING_STATUSES.filter((s) => s !== status);
 }
+
+/** For "Probably a name (person, city)". */
+export const NAME_KIND_LABELS: Record<NameKind, string> = {
+  [NameKind.PERSON]: 'person',
+  [NameKind.CITY]: 'city',
+  [NameKind.COUNTRY]: 'country',
+  [NameKind.LAKE]: 'lake',
+};

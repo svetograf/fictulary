@@ -75,16 +75,8 @@ mat-error {
   margin-bottom: 8px;
 }
 
-.status {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.status-label {
-  color: var(--mat-sys-on-surface-variant);
+.all-known {
+  margin: 0 0 8px -8px;
 }
 
 .actions,
@@ -106,9 +98,21 @@ mat-error {
   align-self: flex-start;
 }
 
-.status-hint {
-  flex-basis: 100%;
-  margin: 0;
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
+.names-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+    font-weight: 500;
+  }
 }

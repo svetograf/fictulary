@@ -15,6 +15,7 @@ export const phone: DictionaryWord = {
 
 export const phoneDetails: DictionaryWordDetails = {
   ...phone,
+  nameKinds: [],
   books: [
     { bookId: 3, name: 'Tale', count: 40 },
     { bookId: 4, name: 'Notes', count: 2 },

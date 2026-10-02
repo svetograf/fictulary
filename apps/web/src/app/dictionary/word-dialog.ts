@@ -26,6 +26,7 @@ import { WordRef } from './dictionary.actions';
 import { DictionaryService } from './dictionary.service';
 import { DictionaryState } from './dictionary.state';
 import {
+  NAME_KIND_LABELS,
   SET_ASIDE_STATUSES,
   WORD_STATUSES,
   WORD_STATUS_ICONS,
@@ -75,6 +76,18 @@ export class WordDialog {
   protected readonly statuses = WORD_STATUSES;
   protected readonly setAside = SET_ASIDE_STATUSES;
   protected readonly learning = WordStatus.LEARNING;
+
+  /**
+   * "person, city" when the word is in the names list, whatever its status:
+   * it helps decide whether to file a word under Name, and shows what a
+   * Name word names when browsing the Name list.
+   */
+  protected readonly nameHint = computed(() => {
+    const kinds = this.details()?.nameKinds ?? [];
+    return kinds.length
+      ? kinds.map((kind) => NAME_KIND_LABELS[kind]).join(', ')
+      : null;
+  });
 
   /** Where the open word is (or was) in the list it was opened from. */
   private readonly position = signal(this.indexOf(this.data.word));

@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
-import { WordStatus } from '@fictulary/shared/models';
+import { NameKind, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import {
   LoadDefinitionFail,
@@ -115,6 +115,41 @@ describe('WordDialog', () => {
       ['Tale', '/book/3'],
       ['Notes', '/book/4'],
     ]);
+  });
+
+  describe('name hint', () => {
+    const hint = async (nameKinds: NameKind[], status = WordStatus.UNKNOWN) => {
+      setOpenWord({ ...phone, status });
+      const fixture = await render();
+      store.dispatch(
+        new LoadWordDetailsSuccess({ ...phoneDetails, status, nameKinds }),
+      );
+      await fixture.whenStable();
+      return (fixture.nativeElement as HTMLElement)
+        .querySelector('.name-hint')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    it('says what the word probably names', async () => {
+      expect(await hint([NameKind.CITY])).toBe('badge Probably a name (city)');
+    });
+
+    it('lists every kind it was found as', async () => {
+      expect(await hint([NameKind.PERSON, NameKind.CITY])).toBe(
+        'badge Probably a name (person, city)',
+      );
+    });
+
+    it('is not shown for words outside the names list', async () => {
+      expect(await hint([])).toBeUndefined();
+    });
+
+    it('is shown for Name words too, e.g. when browsing the Name list', async () => {
+      expect(await hint([NameKind.PERSON], WordStatus.NAME)).toBe(
+        'badge Probably a name (person)',
+      );
+    });
   });
 
   it('reflects the status change from viewing an unknown word', async () => {

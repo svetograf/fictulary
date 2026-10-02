@@ -1,6 +1,7 @@
-import { WordStatus } from '@fictulary/shared/models';
+import { NameKind, WordStatus } from '@fictulary/shared/models';
 import { NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { NamesService } from '../names/names.service';
 import { DictionaryService } from './dictionary.service';
 
 describe('DictionaryService', () => {
@@ -34,9 +35,11 @@ describe('DictionaryService', () => {
     update: jest.fn(),
     countBy: jest.fn(),
   };
-  const service = new DictionaryService({
-    getRepository: () => repo,
-  } as unknown as DataSource);
+  const namesService = { kindsOf: jest.fn() };
+  const service = new DictionaryService(
+    { getRepository: () => repo } as unknown as DataSource,
+    namesService as unknown as NamesService,
+  );
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -110,5 +113,18 @@ describe('DictionaryService', () => {
     await expect(service.markViewed(5, '999')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('includes what the word names, if it is in the names list', async () => {
+    qb.getRawOne.mockResolvedValue({ ...row, word: 'london' });
+    qb.getRawMany.mockResolvedValue([{ bookId: 3, name: 'Tale', count: '7' }]);
+    namesService.kindsOf.mockResolvedValue([NameKind.PERSON, NameKind.CITY]);
+
+    await expect(service.details(5, '12')).resolves.toMatchObject({
+      word: 'london',
+      books: [{ bookId: 3, name: 'Tale', count: 7 }],
+      nameKinds: [NameKind.PERSON, NameKind.CITY],
+    });
+    expect(namesService.kindsOf).toHaveBeenCalledWith('london');
   });
 });

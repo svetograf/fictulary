@@ -180,3 +180,12 @@ mat-dialog-actions {
     )
   );
 }
+
+.name-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--mat-sys-tertiary);
+  font: var(--mat-sys-label-large);
+}

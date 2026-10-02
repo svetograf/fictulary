@@ -132,23 +132,9 @@
         }
       </mat-form-field>
 
-      <div class="status">
-        <span id="status-label" class="status-label">Have you read it?</span>
-        <mat-button-toggle-group
-          formControlName="wordStatus"
-          aria-labelledby="status-label"
-          aria-describedby="status-hint"
-        >
-          @for (option of readingOptions; track option.status) {
-            <mat-button-toggle [value]="option.status">
-              {{ option.label }}
-            </mat-button-toggle>
-          }
-        </mat-button-toggle-group>
-        <p id="status-hint" class="status-hint">
-          {{ readingHint(controls.wordStatus.value) }}
-        </p>
-      </div>
+      <mat-checkbox formControlName="allKnown" class="all-known">
+        Add all the words as known to my dictionary
+      </mat-checkbox>
 
       <div class="actions">
         <button mat-flat-button type="submit" [disabled]="uploading()">
@@ -181,6 +167,18 @@
   <p class="error" role="alert"><mat-icon>error</mat-icon> {{ message }}</p>
 }
 @if (book(); as result) {
+  @if (result.markedAsNames.length) {
+    <div class="names-notice" role="status">
+      <mat-icon>badge</mat-icon>
+      <p>
+        Some words were marked as names:
+        {{ namesSummary(result.markedAsNames) }}.
+        <a routerLink="/my-dictionary" [queryParams]="{ status: 'NAME' }"
+          >Review names</a
+        >
+      </p>
+    </div>
+  }
   <app-book-details-card [book]="result" />
   <a mat-stroked-button [routerLink]="['/book', result.id]" class="open-book">
     <mat-icon>open_in_new</mat-icon>

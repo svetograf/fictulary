@@ -5,9 +5,10 @@ import {
 } from '@angular/common/http/testing';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { WordStatus } from '@fictulary/shared/models';
+import { UploadedBook, WordStatus } from '@fictulary/shared/models';
+import { provideRouter } from '@angular/router';
 import { Store, provideStore } from '@ngxs/store';
-import { UploadFile } from './books.actions';
+import { UploadFile, UploadFileSuccess } from './books.actions';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 import { UploadPage } from './upload-page';
@@ -43,6 +44,7 @@ describe('UploadPage', () => {
       imports: [UploadPage],
       providers: [
         provideStore([BooksState]),
+        provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: BooksService, useValue: books },
@@ -101,11 +103,10 @@ describe('UploadPage', () => {
     expect(form.controls.file.touched).toBe(true);
   });
 
-  it('uploads through the books service', () => {
+  it('uploads through the books service, new words as unknown', () => {
     const file = txt('tale.txt');
     drop(file);
     form.controls.description.setValue('  Classic  ');
-    form.controls.wordStatus.setValue(WordStatus.LEARNING);
 
     element.querySelector('form')?.dispatchEvent(new Event('submit'));
 
@@ -113,20 +114,28 @@ describe('UploadPage', () => {
       file,
       name: 'tale',
       description: 'Classic',
-      wordStatus: WordStatus.LEARNING,
+      wordStatus: WordStatus.UNKNOWN,
     });
   });
 
-  it('defaults to "Not read" and explains what each choice does', async () => {
-    expect(form.controls.wordStatus.value).toBe(WordStatus.UNKNOWN);
-    const hint = () =>
-      element.querySelector('#status-hint')?.textContent?.trim();
-    expect(hint()).toBe('New words go to your dictionary as unknown.');
+  it('adds all the words as known when the box is checked', async () => {
+    const checkbox = element.querySelector('mat-checkbox.all-known');
+    expect(checkbox?.textContent?.trim()).toBe(
+      'Add all the words as known to my dictionary',
+    );
+    const input = checkbox?.querySelector<HTMLInputElement>(
+      'input[type=checkbox]',
+    );
+    expect(input?.checked).toBe(false);
 
-    form.controls.wordStatus.setValue(WordStatus.KNOWN);
+    drop(txt('tale.txt'));
+    input?.click();
     await TestBed.inject(ApplicationRef).whenStable();
-    expect(hint()).toBe(
-      'All its words are marked known, including ones you were learning.',
+    expect(form.controls.allKnown.value).toBe(true);
+
+    element.querySelector('form')?.dispatchEvent(new Event('submit'));
+    expect(books.upload).toHaveBeenCalledWith(
+      expect.objectContaining({ wordStatus: WordStatus.KNOWN }),
     );
   });
 
@@ -220,6 +229,48 @@ describe('UploadPage', () => {
       // Re-enabling the form must not re-enable the file input.
       expect(form.controls.text.enabled).toBe(true);
       expect(form.controls.file.disabled).toBe(true);
+    });
+  });
+
+  describe('names notice', () => {
+    const uploaded = (markedAsNames: string[]): UploadedBook => ({
+      id: 9,
+      name: 'Tom Sawyer',
+      description: null,
+      wordCount: 10,
+      uniqueWordCount: 5,
+      createdAt: '2026-10-01T10:00:00.000Z',
+      words: [],
+      markedAsNames,
+    });
+    const showResult = async (markedAsNames: string[]) => {
+      TestBed.inject(Store).dispatch(
+        new UploadFileSuccess(uploaded(markedAsNames)),
+      );
+      await fixture.whenStable();
+      return element.querySelector('.names-notice');
+    };
+
+    it('lists the words marked as names', async () => {
+      const notice = await showResult(['tom', 'becky', "o'brien"]);
+      expect(notice?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        "badge Some words were marked as names: Tom, Becky, O'brien. Review names",
+      );
+      expect(notice?.querySelector('a')?.getAttribute('href')).toBe(
+        '/my-dictionary?status=NAME',
+      );
+    });
+
+    it('shortens long lists', async () => {
+      const names = Array.from({ length: 15 }, (_, i) => `name${i + 1}`);
+      const notice = await showResult(names);
+      expect(notice?.textContent).toContain('Name11, Name12 and 3 more.');
+      expect(notice?.textContent).not.toContain('Name13');
+    });
+
+    it('is not shown when no names were found', async () => {
+      expect(await showResult([])).toBeNull();
+      expect(element.querySelector('app-book-details-card')).not.toBeNull();
     });
   });
 });

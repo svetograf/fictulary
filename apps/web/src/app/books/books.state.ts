@@ -8,6 +8,7 @@ import {
   BookDetails,
   BookSummary,
   DictionaryWord,
+  UploadedBook,
   WORDS_TO_LEARN_STATUSES,
 } from '@fictulary/shared/models';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
@@ -49,7 +50,7 @@ export interface BooksStateModel {
     uploading: boolean;
     /** Upload progress in percent, or null once the file has been sent. */
     progress: number | null;
-    book: BookDetails | null;
+    book: UploadedBook | null;
     error: string | null;
   };
 }
@@ -126,7 +127,7 @@ export class BooksState {
   }
 
   @Selector()
-  static uploadedBook(state: BooksStateModel): BookDetails | null {
+  static uploadedBook(state: BooksStateModel): UploadedBook | null {
     return state.upload.book;
   }
 
@@ -196,7 +197,7 @@ export class BooksState {
     }
 
     return this.http
-      .post<BookDetails>('/api/book', body, {
+      .post<UploadedBook>('/api/book', body, {
         observe: 'events',
         reportProgress: true,
       })
@@ -294,10 +295,10 @@ function toSummary(book: BookDetails): BookSummary {
   };
 }
 
-function withWordStatus(
-  book: BookDetails | null,
+function withWordStatus<T extends BookDetails>(
+  book: T | null,
   changed: DictionaryWord,
-): BookDetails | null {
+): T | null {
   if (!book?.words.some((w) => w.wordId === changed.wordId)) {
     return book;
   }
