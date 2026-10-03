@@ -30,19 +30,33 @@
   }
 
   @if (books().length) {
-    <mat-nav-list>
+    <ul class="books">
       @for (book of books(); track book.id) {
-        <a mat-list-item [routerLink]="['/book', book.id]">
-          <mat-icon matListItemIcon>menu_book</mat-icon>
-          <span matListItemTitle>{{ book.name }}</span>
-          <span matListItemLine>
-            {{ book.wordCount | number }} words ·
-            {{ book.uniqueWordCount | number }} distinct · Added
-            {{ book.createdAt | date: 'mediumDate' }}
-          </span>
-        </a>
+        <li>
+          <a class="book" [routerLink]="['/book', book.id]">
+            <mat-icon>menu_book</mat-icon>
+            <span class="text">
+              <span class="title">{{ book.name }}</span>
+              <span class="details">
+                {{ book.wordCount | number }} words ·
+                {{ book.uniqueWordCount | number }} distinct · Added
+                {{ book.createdAt | date: 'mediumDate' }}
+              </span>
+            </span>
+          </a>
+          <button
+            mat-icon-button
+            type="button"
+            matTooltip="Delete book"
+            [attr.aria-label]="'Delete ' + book.name"
+            [disabled]="deleting().includes(book.id)"
+            (click)="deleteBook(book)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </li>
       }
-    </mat-nav-list>
+    </ul>
   } @else if (!loading() && !error()) {
     <div class="empty">
       <mat-icon>library_books</mat-icon>

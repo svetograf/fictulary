@@ -56,19 +56,33 @@
           {{ word.bookCount }} {{ word.bookCount === 1 ? 'book' : 'books' }}
         </span>
         <span class="actions">
-          @for (status of otherStatuses(word.status); track status) {
-            <!-- The accessible name starts with the visible label. -->
+          @if (word.status === name) {
+            <!-- Names get one action: back to Unknown if it isn't one. -->
             <button
-              [matButton]="status === learning ? 'filled' : 'outlined'"
+              matButton="outlined"
               type="button"
-              [class.learn]="status === learning"
               [disabled]="pending().includes(word.wordId)"
-              [attr.aria-label]="moveLabels[status] + ': ' + word.word"
-              (click)="move(word, status)"
+              [attr.aria-label]="'Restore: ' + word.word"
+              (click)="move(word, restore)"
             >
-              <mat-icon>{{ icons[status] }}</mat-icon>
-              {{ moveLabels[status] }}
+              <mat-icon>undo</mat-icon>
+              Restore
             </button>
+          } @else {
+            @for (status of otherStatuses(word.status); track status) {
+              <!-- The accessible name starts with the visible label. -->
+              <button
+                [matButton]="status === learning ? 'filled' : 'outlined'"
+                type="button"
+                [class.learn]="status === learning"
+                [disabled]="pending().includes(word.wordId)"
+                [attr.aria-label]="moveLabels[status] + ': ' + word.word"
+                (click)="move(word, status)"
+              >
+                <mat-icon>{{ icons[status] }}</mat-icon>
+                {{ moveLabels[status] }}
+              </button>
+            }
           }
         </span>
       </li>

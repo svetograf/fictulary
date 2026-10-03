@@ -5,15 +5,14 @@ import {
 } from '@angular/common/http/testing';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { UploadedBook, WordStatus } from '@fictulary/shared/models';
-import { provideRouter } from '@angular/router';
+import { WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
-import { UploadFile, UploadFileSuccess } from './books.actions';
+import { ResetUpload, UploadFile } from './books.actions';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
-import { UploadPage } from './upload-page';
+import { UploadForm } from './upload-form';
 
-type Form = UploadPage['form'];
+type Form = UploadForm['form'];
 
 /** jsdom's File has no text(); read it the old way. */
 const readText = (file: File) =>
@@ -23,11 +22,11 @@ const readText = (file: File) =>
     reader.readAsText(file);
   });
 
-describe('UploadPage', () => {
+describe('UploadForm', () => {
   const books = { upload: vi.fn(), reset: vi.fn() };
   let form: Form;
   let element: HTMLElement;
-  let fixture: ReturnType<typeof TestBed.createComponent<UploadPage>>;
+  let fixture: ReturnType<typeof TestBed.createComponent<UploadForm>>;
 
   const txt = (name: string, size = 10) =>
     new File(['x'.repeat(size)], name, { type: 'text/plain' });
@@ -41,17 +40,16 @@ describe('UploadPage', () => {
   beforeEach(async () => {
     vi.resetAllMocks();
     await TestBed.configureTestingModule({
-      imports: [UploadPage],
+      imports: [UploadForm],
       providers: [
         provideStore([BooksState]),
-        provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: BooksService, useValue: books },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UploadPage);
+    fixture = TestBed.createComponent(UploadForm);
     await fixture.whenStable();
     element = fixture.nativeElement;
     form = (fixture.componentInstance as unknown as { form: Form }).form;
@@ -232,45 +230,21 @@ describe('UploadPage', () => {
     });
   });
 
-  describe('names notice', () => {
-    const uploaded = (markedAsNames: string[]): UploadedBook => ({
-      id: 9,
-      name: 'Tom Sawyer',
-      description: null,
-      wordCount: 10,
-      uniqueWordCount: 5,
-      createdAt: '2026-10-01T10:00:00.000Z',
-      words: [],
-      markedAsNames,
-    });
-    const showResult = async (markedAsNames: string[]) => {
-      TestBed.inject(Store).dispatch(
-        new UploadFileSuccess(uploaded(markedAsNames)),
-      );
-      await fixture.whenStable();
-      return element.querySelector('.names-notice');
-    };
+  it('clears itself when a new upload starts', async () => {
+    drop(txt('tale.txt'));
+    form.controls.allKnown.setValue(true);
+    form.controls.source.setValue('text');
+    await fixture.whenStable();
 
-    it('lists the words marked as names', async () => {
-      const notice = await showResult(['tom', 'becky', "o'brien"]);
-      expect(notice?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-        "badge Some words were marked as names: Tom, Becky, O'brien. Review names",
-      );
-      expect(notice?.querySelector('a')?.getAttribute('href')).toBe(
-        '/my-dictionary?status=NAME',
-      );
-    });
+    TestBed.inject(Store).dispatch(new ResetUpload());
+    await fixture.whenStable();
 
-    it('shortens long lists', async () => {
-      const names = Array.from({ length: 15 }, (_, i) => `name${i + 1}`);
-      const notice = await showResult(names);
-      expect(notice?.textContent).toContain('Name11, Name12 and 3 more.');
-      expect(notice?.textContent).not.toContain('Name13');
-    });
-
-    it('is not shown when no names were found', async () => {
-      expect(await showResult([])).toBeNull();
-      expect(element.querySelector('app-book-details-card')).not.toBeNull();
-    });
+    expect(form.controls.file.value).toBeNull();
+    expect(form.controls.name.value).toBe('');
+    expect(form.controls.allKnown.value).toBe(false);
+    expect(form.controls.source.value).toBe('file');
+    // The file input is the active source again.
+    expect(form.controls.file.enabled).toBe(true);
+    expect(form.controls.text.disabled).toBe(true);
   });
 });

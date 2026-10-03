@@ -7,8 +7,12 @@ import { Injectable, inject } from '@angular/core';
 import {
   BookDetails,
   BookSummary,
+  BookWordsPage,
+  BOOK_TOP_WORDS_LIMIT,
   DictionaryWord,
   UploadedBook,
+  WordCount,
+  WordStatus,
   WORDS_TO_LEARN_STATUSES,
 } from '@fictulary/shared/models';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
@@ -21,6 +25,15 @@ import {
 } from '../dictionary/dictionary.actions';
 import { httpErrorMessage } from '../shared/http-error-message';
 import {
+  LoadBookWords,
+  LoadBookWordsFail,
+  LoadBookWordsSuccess,
+  DeleteBook,
+  DeleteBookFail,
+  DeleteBookSuccess,
+  LoadBookNames,
+  LoadBookNamesFail,
+  LoadBookNamesSuccess,
   LoadBook,
   LoadBookFail,
   LoadBookSuccess,
@@ -40,17 +53,40 @@ export interface BooksStateModel {
     loading: boolean;
     error: string | null;
   };
+  /** Books with a delete request in flight. */
+  deletingIds: number[];
   /** The book opened on the book page. */
   current: {
     book: BookDetails | null;
     loading: boolean;
     error: string | null;
+    /** The shown page of the book's words to learn. */
+    words: {
+      items: WordCount[];
+      total: number;
+      /** The page `items` are from, 1-based. */
+      page: number;
+      pageSize: number;
+      /** The page last asked for; it becomes `page` once loaded. */
+      requested: { page: number; pageSize: number };
+      loading: boolean;
+      error: string | null;
+    };
   };
   upload: {
     uploading: boolean;
     /** Upload progress in percent, or null once the file has been sent. */
     progress: number | null;
     book: UploadedBook | null;
+    error: string | null;
+  };
+  /**
+   * Names of the uploaded book, reviewed in the upload wizard. Rows stay
+   * when their status changes, so the user sees (and can undo) changes.
+   */
+  review: {
+    names: WordCount[];
+    loading: boolean;
     error: string | null;
   };
 }
@@ -60,15 +96,30 @@ const initialList: BooksStateModel['list'] = {
   loading: false,
   error: null,
 };
+const initialWords: BooksStateModel['current']['words'] = {
+  items: [],
+  total: 0,
+  page: 1,
+  pageSize: BOOK_TOP_WORDS_LIMIT,
+  requested: { page: 1, pageSize: BOOK_TOP_WORDS_LIMIT },
+  loading: false,
+  error: null,
+};
 const initialCurrent: BooksStateModel['current'] = {
   book: null,
   loading: false,
   error: null,
+  words: initialWords,
 };
 const initialUpload: BooksStateModel['upload'] = {
   uploading: false,
   progress: null,
   book: null,
+  error: null,
+};
+const initialReview: BooksStateModel['review'] = {
+  names: [],
+  loading: false,
   error: null,
 };
 
@@ -77,9 +128,11 @@ type Ctx = StateContext<BooksStateModel>;
 @State<BooksStateModel>({
   name: 'books',
   defaults: {
+    deletingIds: [],
     list: initialList,
     current: initialCurrent,
     upload: initialUpload,
+    review: initialReview,
   },
 })
 @Injectable()
@@ -132,6 +185,33 @@ export class BooksState {
   }
 
   @Selector()
+  static currentWords(
+    state: BooksStateModel,
+  ): BooksStateModel['current']['words'] {
+    return state.current.words;
+  }
+
+  @Selector()
+  static deletingIds(state: BooksStateModel): number[] {
+    return state.deletingIds;
+  }
+
+  @Selector()
+  static reviewNames(state: BooksStateModel): WordCount[] {
+    return state.review.names;
+  }
+
+  @Selector()
+  static reviewLoading(state: BooksStateModel): boolean {
+    return state.review.loading;
+  }
+
+  @Selector()
+  static reviewError(state: BooksStateModel): string | null {
+    return state.review.error;
+  }
+
+  @Selector()
   static uploadError(state: BooksStateModel): string | null {
     return state.upload.error;
   }
@@ -174,7 +254,20 @@ export class BooksState {
 
   @Action(LoadBookSuccess)
   loadBookSuccess(ctx: Ctx, { book }: LoadBookSuccess) {
-    ctx.setState(patch({ current: { ...initialCurrent, book } }));
+    // Page 1 comes with the book; other pages are loaded on demand.
+    ctx.setState(
+      patch({
+        current: {
+          ...initialCurrent,
+          book,
+          words: {
+            ...initialWords,
+            items: book.words,
+            total: book.wordsToLearnCount,
+          },
+        },
+      }),
+    );
   }
 
   @Action(LoadBookFail)
@@ -251,9 +344,11 @@ export class BooksState {
   @Action(SignOut)
   signOut(ctx: Ctx) {
     ctx.setState({
+      deletingIds: [],
       list: initialList,
       current: initialCurrent,
       upload: initialUpload,
+      review: initialReview,
     });
   }
 
@@ -267,18 +362,161 @@ export class BooksState {
     ctx: Ctx,
     { word }: ChangeWordStatusSuccess | MarkWordViewedSuccess,
   ) {
-    const { current, upload } = ctx.getState();
+    const { current, upload, review } = ctx.getState();
+    const leaves = !WORDS_TO_LEARN_STATUSES.includes(word.status);
+    const shown = current.words.items.some((w) => w.wordId === word.wordId);
     ctx.setState(
       patch({
-        current: patch({ book: withWordStatus(current.book, word) }),
+        current: patch({
+          book: withWordStatus(current.book, word),
+          words: patch({
+            items: leaves
+              ? current.words.items.filter((w) => w.wordId !== word.wordId)
+              : current.words.items.map((w) =>
+                  w.wordId === word.wordId ? { ...w, status: word.status } : w,
+                ),
+            total:
+              shown && leaves ? current.words.total - 1 : current.words.total,
+          }),
+        }),
         upload: patch({ book: withWordStatus(upload.book, word) }),
+        review: patch({
+          names: review.names.map((w) =>
+            w.wordId === word.wordId ? { ...w, status: word.status } : w,
+          ),
+        }),
+      }),
+    );
+    // A row left the page: reload it so the next word moves up into it.
+    if (shown && leaves && current.book) {
+      const { page, pageSize } = current.words;
+      return ctx.dispatch(new LoadBookWords(current.book.id, page, pageSize));
+    }
+    return undefined;
+  }
+
+  @Action(DeleteBook)
+  deleteBook(ctx: Ctx, { id }: DeleteBook) {
+    ctx.setState(patch({ deletingIds: [...ctx.getState().deletingIds, id] }));
+    return this.http.delete<void>(`/api/book/${id}`).pipe(
+      mergeMap(() => ctx.dispatch(new DeleteBookSuccess(id))),
+      catchError((error: HttpErrorResponse) =>
+        ctx.dispatch(new DeleteBookFail(id, httpErrorMessage(error))),
+      ),
+    );
+  }
+
+  @Action(DeleteBookSuccess)
+  deleteBookSuccess(ctx: Ctx, { id }: DeleteBookSuccess) {
+    const { deletingIds, list, current } = ctx.getState();
+    ctx.setState(
+      patch({
+        deletingIds: deletingIds.filter((d) => d !== id),
+        list: patch({ books: list.books.filter((b) => b.id !== id) }),
+        current: current.book?.id === id ? initialCurrent : current,
       }),
     );
   }
 
+  /** The error itself is shown by the page that asked for the delete. */
+  @Action(DeleteBookFail)
+  deleteBookFail(ctx: Ctx, { id }: DeleteBookFail) {
+    ctx.setState(
+      patch({
+        deletingIds: ctx.getState().deletingIds.filter((d) => d !== id),
+      }),
+    );
+  }
+
+  @Action(LoadBookWords, { cancelUncompleted: true })
+  loadBookWords(ctx: Ctx, { bookId, page, pageSize }: LoadBookWords) {
+    // Keep showing the current page (with its numbering) until the new one
+    // arrives.
+    ctx.setState(
+      patch({
+        current: patch({
+          words: patch({
+            requested: { page, pageSize },
+            loading: true,
+            error: null,
+          }),
+        }),
+      }),
+    );
+    return this.http
+      .get<BookWordsPage>(`/api/book/${bookId}/words-to-learn`, {
+        params: { page, pageSize },
+      })
+      .pipe(
+        mergeMap((result) => ctx.dispatch(new LoadBookWordsSuccess(result))),
+        catchError((error: HttpErrorResponse) =>
+          ctx.dispatch(new LoadBookWordsFail(httpErrorMessage(error))),
+        ),
+      );
+  }
+
+  @Action(LoadBookWordsSuccess)
+  loadBookWordsSuccess(ctx: Ctx, { page }: LoadBookWordsSuccess) {
+    const { book } = ctx.getState().current;
+    // Past the last page (its last words were just moved away): go back.
+    const lastPage = Math.max(1, Math.ceil(page.total / page.pageSize));
+    if (book && page.items.length === 0 && page.page > lastPage) {
+      return ctx.dispatch(new LoadBookWords(book.id, lastPage, page.pageSize));
+    }
+    ctx.setState(
+      patch({
+        current: patch({
+          words: {
+            ...initialWords,
+            items: page.items,
+            total: page.total,
+            page: page.page,
+            pageSize: page.pageSize,
+            requested: { page: page.page, pageSize: page.pageSize },
+          },
+        }),
+      }),
+    );
+    return undefined;
+  }
+
+  @Action(LoadBookWordsFail)
+  loadBookWordsFail(ctx: Ctx, { error }: LoadBookWordsFail) {
+    ctx.setState(
+      patch({
+        current: patch({ words: patch({ loading: false, error }) }),
+      }),
+    );
+  }
+
+  @Action(LoadBookNames, { cancelUncompleted: true })
+  loadBookNames(ctx: Ctx, { bookId }: LoadBookNames) {
+    ctx.setState(patch({ review: { ...initialReview, loading: true } }));
+    return this.http
+      .get<WordCount[]>(`/api/book/${bookId}/words`, {
+        params: { status: WordStatus.NAME },
+      })
+      .pipe(
+        mergeMap((words) => ctx.dispatch(new LoadBookNamesSuccess(words))),
+        catchError((error: HttpErrorResponse) =>
+          ctx.dispatch(new LoadBookNamesFail(httpErrorMessage(error))),
+        ),
+      );
+  }
+
+  @Action(LoadBookNamesSuccess)
+  loadBookNamesSuccess(ctx: Ctx, { words }: LoadBookNamesSuccess) {
+    ctx.setState(patch({ review: { ...initialReview, names: words } }));
+  }
+
+  @Action(LoadBookNamesFail)
+  loadBookNamesFail(ctx: Ctx, { error }: LoadBookNamesFail) {
+    ctx.setState(patch({ review: { ...initialReview, error } }));
+  }
+
   @Action(ResetUpload)
   resetUpload(ctx: Ctx) {
-    ctx.setState(patch({ upload: initialUpload }));
+    ctx.setState(patch({ upload: initialUpload, review: initialReview }));
   }
 }
 

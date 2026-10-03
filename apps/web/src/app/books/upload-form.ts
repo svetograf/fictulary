@@ -28,9 +28,8 @@ import {
   BOOK_NAME_MAX_LENGTH,
   WordStatus,
 } from '@fictulary/shared/models';
-import { RouterLink } from '@angular/router';
-import { select } from '@ngxs/store';
-import { BookDetailsCard } from './book-details-card';
+import { Actions, ofActionDispatched, select } from '@ngxs/store';
+import { ResetUpload } from './books.actions';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 import { notBlank } from '../shared/validators';
@@ -43,19 +42,14 @@ import {
 
 type TextSource = 'file' | 'text';
 
-/** Names listed in the notice after an upload; the rest are counted. */
-const NAMES_SHOWN = 12;
-
 /** The backend accepts .txt uploads; pasted text is sent as one. */
 const PASTED_FILE_NAME = 'pasted-text.txt';
 
 @Component({
-  selector: 'app-upload-page',
+  selector: 'app-upload-form',
   imports: [
     DecimalPipe,
     ReactiveFormsModule,
-    RouterLink,
-    BookDetailsCard,
     MatButtonModule,
     MatButtonToggleModule,
     MatCheckboxModule,
@@ -65,15 +59,15 @@ const PASTED_FILE_NAME = 'pasted-text.txt';
     MatInputModule,
     MatProgressSpinnerModule,
   ],
-  templateUrl: './upload-page.html',
-  styleUrl: './upload-page.scss',
+  templateUrl: './upload-form.html',
+  styleUrl: './upload-form.scss',
 })
-export class UploadPage {
+/** Step 1 of the upload wizard: the book's text and details. */
+export class UploadForm {
   private readonly books = inject(BooksService);
 
   protected readonly uploading = select(BooksState.uploading);
   protected readonly progress = select(BooksState.uploadProgress);
-  protected readonly book = select(BooksState.uploadedBook);
   protected readonly error = select(BooksState.uploadError);
 
   protected readonly limits = {
@@ -137,9 +131,17 @@ export class UploadPage {
         this.syncSource();
       }
     });
+    const destroyRef = inject(DestroyRef);
     this.controls.source.valueChanges
-      .pipe(takeUntilDestroyed(inject(DestroyRef)))
+      .pipe(takeUntilDestroyed(destroyRef))
       .subscribe(() => this.syncSource());
+    // "Upload another book" in the wizard: start from an empty form.
+    inject(Actions)
+      .pipe(ofActionDispatched(ResetUpload), takeUntilDestroyed(destroyRef))
+      .subscribe(() => {
+        this.form.reset();
+        this.syncSource();
+      });
     this.syncSource();
   }
 
@@ -209,15 +211,6 @@ export class UploadPage {
       source.value === 'file' ? [file, text] : [text, file];
     active.enable({ emitEvent: false });
     inactive.disable({ emitEvent: false });
-  }
-
-  /** "Tom, Becky, … and 3 more": names are stored lowercase. */
-  protected namesSummary(names: string[]): string {
-    const shown = names
-      .slice(0, NAMES_SHOWN)
-      .map((name) => name.charAt(0).toUpperCase() + name.slice(1));
-    const more = names.length - shown.length;
-    return more > 0 ? `${shown.join(', ')} and ${more} more` : shown.join(', ');
   }
 
   private setFile(file: File | null): void {

@@ -6,13 +6,19 @@ import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { Router } from '@angular/router';
 import { withComponentInputBinding } from '@angular/router';
 import { BookDetails, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import { ChangeWordStatusFail } from '../dictionary/dictionary.actions';
 import { DictionaryService } from '../dictionary/dictionary.service';
 import { DictionaryState } from '../dictionary/dictionary.state';
-import { LoadBookFail, LoadBookSuccess } from './books.actions';
+import {
+  DeleteBookSuccess,
+  LoadBookFail,
+  LoadBookSuccess,
+  LoadBookWordsSuccess,
+} from './books.actions';
 import { BookPage } from './book-page';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
@@ -28,16 +34,22 @@ const book: BookDetails = {
     { wordId: '1', word: 'be', count: 6, status: WordStatus.LEARNING },
     { wordId: '2', word: 'cat', count: 4, status: WordStatus.UNKNOWN },
   ],
+  wordsToLearnCount: 2,
 };
 
 describe('BookPage', () => {
-  const booksService = { loadBook: vi.fn() };
+  const booksService = {
+    loadBook: vi.fn(),
+    deleteBook: vi.fn(),
+    loadBookWords: vi.fn(),
+  };
   const dictionary = {
     changeStatus: vi.fn(),
     openWord: vi.fn(),
     closeWord: vi.fn(),
   };
-  const dialog = { open: vi.fn(() => ({ afterClosed: () => of(undefined) })) };
+  /** Answers both the word dialog (ignored) and delete confirmations. */
+  const dialog = { open: vi.fn(() => ({ afterClosed: () => of(true) })) };
   const snackBar = { open: vi.fn() };
   let harness: RouterTestingHarness;
 
@@ -89,7 +101,9 @@ describe('BookPage', () => {
 
   it('says so when every word in the book is known', async () => {
     await harness.navigateByUrl('/book/3', BookPage);
-    TestBed.inject(Store).dispatch(new LoadBookSuccess({ ...book, words: [] }));
+    TestBed.inject(Store).dispatch(
+      new LoadBookSuccess({ ...book, words: [], wordsToLearnCount: 0 }),
+    );
     await harness.fixture.whenStable();
 
     const element = harness.routeNativeElement as HTMLElement;
@@ -199,6 +213,86 @@ describe('BookPage', () => {
         'Dismiss',
         { duration: 5000 },
       );
+    });
+  });
+
+  describe('deleting', () => {
+    it('deletes the book after confirmation', async () => {
+      await harness.navigateByUrl('/book/3', BookPage);
+      TestBed.inject(Store).dispatch(new LoadBookSuccess(book));
+      await harness.fixture.whenStable();
+
+      const button = [
+        ...(
+          harness.routeNativeElement as HTMLElement
+        ).querySelectorAll<HTMLButtonElement>('.toolbar button'),
+      ].find((b) => b.textContent?.includes('Delete book'));
+      button?.click();
+
+      expect(booksService.deleteBook).toHaveBeenCalledWith(3);
+    });
+
+    it('goes back to the list once the book is deleted', async () => {
+      await harness.navigateByUrl('/book/3', BookPage);
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+      TestBed.inject(Store).dispatch(new DeleteBookSuccess(4)); // another book
+      expect(navigate).not.toHaveBeenCalledWith('/');
+
+      TestBed.inject(Store).dispatch(new DeleteBookSuccess(3));
+      expect(navigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  describe('paging the words', () => {
+    const open = async (url: string, total = 250) => {
+      await harness.navigateByUrl(url, BookPage);
+      TestBed.inject(Store).dispatch(
+        new LoadBookSuccess({ ...book, wordsToLearnCount: total }),
+      );
+      await harness.fixture.whenStable();
+    };
+
+    it('shows the first 100 that come with the book, without a request', async () => {
+      await open('/book/3');
+      expect(booksService.loadBookWords).not.toHaveBeenCalled();
+      expect(
+        harness.routeNativeElement
+          ?.querySelector('.mat-mdc-paginator-range-label')
+          ?.textContent?.trim(),
+      ).toBe('1 – 100 of 250');
+    });
+
+    it('loads the page in the URL', async () => {
+      await open('/book/3?page=3&pageSize=50');
+      expect(booksService.loadBookWords).toHaveBeenCalledTimes(1);
+      expect(booksService.loadBookWords).toHaveBeenCalledWith(3, 3, 50);
+    });
+
+    it('asks once for a page past the end, letting the state settle', async () => {
+      await open('/book/3?page=999');
+      // The state steps back to the last page (another request it makes
+      // itself); the page must not ask for 999 again.
+      TestBed.inject(Store).dispatch(
+        new LoadBookWordsSuccess({
+          items: [],
+          total: 250,
+          page: 3,
+          pageSize: 100,
+        }),
+      );
+      await harness.fixture.whenStable();
+      expect(booksService.loadBookWords).toHaveBeenCalledTimes(1);
+    });
+
+    it('puts the chosen page in the URL', async () => {
+      await open('/book/3');
+      const next = harness.routeNativeElement?.querySelector<HTMLButtonElement>(
+        '.mat-mdc-paginator-navigation-next',
+      );
+      next?.click();
+      await harness.fixture.whenStable();
+      expect(TestBed.inject(Router).url).toBe('/book/3?page=2&pageSize=100');
     });
   });
 });

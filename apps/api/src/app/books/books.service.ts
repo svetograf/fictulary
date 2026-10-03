@@ -2,6 +2,7 @@ import {
   BOOK_TOP_WORDS_LIMIT,
   BookDetails,
   BookSummary,
+  BookWordsPage,
   UploadedBook,
   WORDS_TO_LEARN_STATUSES,
   WordCount,
@@ -12,7 +13,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, EntityManager, In } from 'typeorm';
+import { DataSource, EntityManager, In, SelectQueryBuilder } from 'typeorm';
 import { UserWord } from '../dictionary/user-word.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { BookWord } from './entities/book-word.entity';
@@ -23,6 +24,9 @@ import { analyzeText, countWords, nameCandidates } from './text/count-words';
 
 /** Keeps each INSERT well below Postgres' 65535 bind-parameter limit. */
 const WORD_INSERT_CHUNK_SIZE = 1000;
+
+/** Cap for a book's words in one status (names in a novel: ~100). */
+const BOOK_WORDS_BY_STATUS_LIMIT = 1000;
 
 @Injectable()
 export class BooksService {
@@ -67,11 +71,12 @@ export class BooksService {
       throw new NotFoundException(`Book ${id} not found`);
     }
 
-    const [words, uniqueWordCount] = await Promise.all([
+    const [words, wordsToLearnCount, uniqueWordCount] = await Promise.all([
       this.wordsToLearn(userId, id),
+      this.countBookWords(userId, id, WORDS_TO_LEARN_STATUSES),
       this.dataSource.getRepository(BookWord).countBy({ bookId: id }),
     ]);
-    return { ...toSummary(book, uniqueWordCount), words };
+    return { ...toSummary(book, uniqueWordCount), words, wordsToLearnCount };
   }
 
   /**
@@ -117,6 +122,11 @@ export class BooksService {
     return {
       ...toSummary(book, counts.size),
       words: await this.wordsToLearn(userId, book.id),
+      wordsToLearnCount: await this.countBookWords(
+        userId,
+        book.id,
+        WORDS_TO_LEARN_STATUSES,
+      ),
       markedAsNames: markedAsNames.sort(
         (a, b) =>
           (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || a.localeCompare(b),
@@ -125,34 +135,112 @@ export class BooksService {
   }
 
   /**
+   * Deletes one of the user's books. Words that were only in this book leave
+   * the user's dictionary (with their status), and words no book uses any
+   * more leave the shared word list.
+   */
+  async remove(userId: number, id: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const book = await manager.findOneBy(Book, { id, userId });
+      if (!book) {
+        throw new NotFoundException(`Book ${id} not found`);
+      }
+      const bookWordIds = `SELECT "wordId" FROM "book_words" WHERE "bookId" = $1`;
+
+      // The user's words found in none of their other books.
+      await manager.query(
+        `DELETE FROM "user_words" uw
+         WHERE uw."userId" = $2
+           AND uw."wordId" IN (${bookWordIds})
+           AND NOT EXISTS (
+             SELECT 1 FROM "book_words" bw
+             JOIN "books" b ON b."id" = bw."bookId"
+             WHERE bw."wordId" = uw."wordId" AND b."userId" = $2 AND b."id" <> $1
+           )`,
+        [id, userId],
+      );
+      // Words in no other book at all, of any user.
+      await manager.query(
+        `DELETE FROM "words" w
+         WHERE w."id" IN (${bookWordIds})
+           AND NOT EXISTS (
+             SELECT 1 FROM "book_words" bw
+             WHERE bw."wordId" = w."id" AND bw."bookId" <> $1
+           )`,
+        [id],
+      );
+      // Its word counts go with it (ON DELETE CASCADE).
+      await manager.delete(Book, { id });
+    });
+  }
+
+  /**
+   * A page of the book's words to learn, most used first. The book object
+   * carries the first 100; this serves the pages after them.
+   */
+  async wordsToLearnPage(
+    userId: number,
+    bookId: number,
+    page: number,
+    pageSize: number,
+  ): Promise<BookWordsPage> {
+    await this.assertOwnBook(userId, bookId);
+    const [items, total] = await Promise.all([
+      this.bookWords(
+        userId,
+        bookId,
+        WORDS_TO_LEARN_STATUSES,
+        pageSize,
+        (page - 1) * pageSize,
+      ),
+      this.countBookWords(userId, bookId, WORDS_TO_LEARN_STATUSES),
+    ]);
+    return { items, total, page, pageSize };
+  }
+
+  /**
+   * The book's words that have `status` in the user's dictionary, most used
+   * first; used to review the names found in a new book.
+   */
+  async wordsWithStatus(
+    userId: number,
+    bookId: number,
+    status: WordStatus,
+  ): Promise<WordCount[]> {
+    await this.assertOwnBook(userId, bookId);
+    return this.bookWords(userId, bookId, [status], BOOK_WORDS_BY_STATUS_LIMIT);
+  }
+
+  /**
    * The book's most frequent words that the user is learning or doesn't
    * know yet; known words are left out.
    */
-  private async wordsToLearn(
+  private wordsToLearn(userId: number, bookId: number): Promise<WordCount[]> {
+    return this.bookWords(
+      userId,
+      bookId,
+      WORDS_TO_LEARN_STATUSES,
+      BOOK_TOP_WORDS_LIMIT,
+    );
+  }
+
+  /** The book's words with one of `statuses`, most used first. */
+  private async bookWords(
     userId: number,
     bookId: number,
+    statuses: readonly WordStatus[],
+    limit: number,
+    offset = 0,
   ): Promise<WordCount[]> {
-    const rows = await this.dataSource
-      .getRepository(BookWord)
-      .createQueryBuilder('bookWord')
-      .innerJoin('bookWord.word', 'word')
-      .innerJoin(
-        UserWord,
-        'userWord',
-        'userWord.wordId = bookWord.wordId AND userWord.userId = :userId',
-        { userId },
-      )
+    const rows = await this.bookWordsQuery(userId, bookId, statuses)
       .select('bookWord.wordId', 'wordId')
       .addSelect('word.word', 'word')
       .addSelect('bookWord.count', 'count')
       .addSelect('userWord.status', 'status')
-      .where('bookWord.bookId = :bookId', { bookId })
-      .andWhere('userWord.status IN (:...statuses)', {
-        statuses: WORDS_TO_LEARN_STATUSES,
-      })
       .orderBy('bookWord.count', 'DESC')
       .addOrderBy('word.word', 'ASC')
-      .limit(BOOK_TOP_WORDS_LIMIT)
+      .offset(offset)
+      .limit(limit)
       .getRawMany<{
         wordId: string;
         word: string;
@@ -166,6 +254,44 @@ export class BooksService {
       count: Number(count),
       status,
     }));
+  }
+
+  private countBookWords(
+    userId: number,
+    bookId: number,
+    statuses: readonly WordStatus[],
+  ): Promise<number> {
+    return this.bookWordsQuery(userId, bookId, statuses).getCount();
+  }
+
+  /** The book's words whose status in the user's dictionary is one of these. */
+  private bookWordsQuery(
+    userId: number,
+    bookId: number,
+    statuses: readonly WordStatus[],
+  ): SelectQueryBuilder<BookWord> {
+    return this.dataSource
+      .getRepository(BookWord)
+      .createQueryBuilder('bookWord')
+      .innerJoin('bookWord.word', 'word')
+      .innerJoin(
+        UserWord,
+        'userWord',
+        'userWord.wordId = bookWord.wordId AND userWord.userId = :userId',
+        { userId },
+      )
+      .where('bookWord.bookId = :bookId', { bookId })
+      .andWhere('userWord.status IN (:...statuses)', { statuses });
+  }
+
+  /** Other users' books are reported as missing, not forbidden. */
+  private async assertOwnBook(userId: number, bookId: number): Promise<void> {
+    const own = await this.dataSource
+      .getRepository(Book)
+      .existsBy({ id: bookId, userId });
+    if (!own) {
+      throw new NotFoundException(`Book ${bookId} not found`);
+    }
   }
 }
 

@@ -1,7 +1,21 @@
-<a mat-button routerLink="/" class="back">
-  <mat-icon>arrow_back</mat-icon>
-  All books
-</a>
+<div class="toolbar">
+  <a mat-button routerLink="/" class="back">
+    <mat-icon>arrow_back</mat-icon>
+    All books
+  </a>
+  @if (book(); as current) {
+    <button
+      mat-stroked-button
+      type="button"
+      class="delete"
+      [disabled]="deleting().includes(current.id)"
+      (click)="deleteBook(current)"
+    >
+      <mat-icon>delete</mat-icon>
+      Delete book
+    </button>
+  }
+</div>
 
 @if (loading()) {
   <div class="status" role="status">
@@ -15,5 +29,9 @@
     <button mat-button (click)="retry()">Retry</button>
   </div>
 } @else if (book(); as current) {
-  <app-book-details-card [book]="current" />
+  <app-book-details-card
+    [book]="current"
+    [words]="words()"
+    (pageChange)="changePage($event)"
+  />
 }

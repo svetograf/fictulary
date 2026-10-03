@@ -197,6 +197,27 @@ describe('DictionaryPage', () => {
     expect(element().querySelector('.empty')?.textContent).toContain(emptyText);
   });
 
+  it('offers a single "Restore" for names, making them Unknown', async () => {
+    await harness.navigateByUrl('/my-dictionary?status=NAME', DictionaryPage);
+    await show([word('1', WordStatus.NAME)], 1);
+
+    const buttons = [
+      ...element().querySelectorAll<HTMLButtonElement>(
+        '.words li .actions button',
+      ),
+    ];
+    expect(
+      buttons.map((b) => b.textContent?.replace(/\s+/g, ' ').trim()),
+    ).toEqual(['undo Restore']);
+    expect(buttons[0].getAttribute('aria-label')).toBe('Restore: word1');
+
+    buttons[0].click();
+    expect(dictionary.changeStatus).toHaveBeenCalledWith(
+      '1',
+      WordStatus.UNKNOWN,
+    );
+  });
+
   it('offers only the learning statuses as quick buttons, even in Trash', async () => {
     await harness.navigateByUrl('/my-dictionary?status=TRASH', DictionaryPage);
     await show([word('1', WordStatus.TRASH)], 1);

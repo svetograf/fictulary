@@ -29,6 +29,7 @@ import { DictionaryState } from './dictionary.state';
 import { notifyWordStatusErrors } from './status-errors';
 import { injectWordDialog } from './word-dialog';
 import {
+  RESTORE_STATUS,
   WORD_STATUSES,
   WORD_STATUS_ICONS,
   WORD_STATUS_LABELS,
@@ -122,6 +123,8 @@ export class DictionaryPage {
   protected readonly labels = WORD_STATUS_LABELS;
   protected readonly moveLabels = MOVE_LABELS;
   protected readonly learning = WordStatus.LEARNING;
+  protected readonly name = WordStatus.NAME;
+  protected readonly restore = RESTORE_STATUS;
   protected readonly icons = WORD_STATUS_ICONS;
   protected readonly otherStatuses = otherStatuses;
   protected readonly pageSizes = PAGE_SIZES;

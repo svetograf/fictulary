@@ -166,22 +166,3 @@
 @if (error(); as message) {
   <p class="error" role="alert"><mat-icon>error</mat-icon> {{ message }}</p>
 }
-@if (book(); as result) {
-  @if (result.markedAsNames.length) {
-    <div class="names-notice" role="status">
-      <mat-icon>badge</mat-icon>
-      <p>
-        Some words were marked as names:
-        {{ namesSummary(result.markedAsNames) }}.
-        <a routerLink="/my-dictionary" [queryParams]="{ status: 'NAME' }"
-          >Review names</a
-        >
-      </p>
-    </div>
-  }
-  <app-book-details-card [book]="result" />
-  <a mat-stroked-button [routerLink]="['/book', result.id]" class="open-book">
-    <mat-icon>open_in_new</mat-icon>
-    Open book page
-  </a>
-}

@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { dispatch } from '@ngxs/store';
 import {
+  DeleteBook,
+  LoadBookWords,
+  LoadBookNames,
   LoadBook,
   LoadBooks,
   ResetUpload,
@@ -16,6 +19,9 @@ import {
 export class BooksService {
   private readonly dispatchLoadBooks = dispatch(LoadBooks);
   private readonly dispatchLoadBook = dispatch(LoadBook);
+  private readonly dispatchLoadBookNames = dispatch(LoadBookNames);
+  private readonly dispatchDeleteBook = dispatch(DeleteBook);
+  private readonly dispatchLoadBookWords = dispatch(LoadBookWords);
   private readonly dispatchUpload = dispatch(UploadFile);
   private readonly dispatchReset = dispatch(ResetUpload);
 
@@ -25,6 +31,18 @@ export class BooksService {
 
   loadBook(id: number) {
     return this.dispatchLoadBook(id);
+  }
+
+  loadBookWords(bookId: number, page: number, pageSize: number) {
+    return this.dispatchLoadBookWords(bookId, page, pageSize);
+  }
+
+  deleteBook(id: number) {
+    return this.dispatchDeleteBook(id);
+  }
+
+  loadBookNames(bookId: number) {
+    return this.dispatchLoadBookNames(bookId);
   }
 
   upload(payload: UploadBookPayload) {

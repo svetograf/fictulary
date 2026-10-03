@@ -2,16 +2,22 @@ import {
   BOOK_FILE_MAX_SIZE,
   BookDetails,
   BookSummary,
+  BookWordsPage,
   UploadedBook,
+  WordCount,
 } from '@fictulary/shared/models';
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseFilePipe,
   ParseIntPipe,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -19,6 +25,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthUser } from '../auth/jwt-payload';
 import { BooksService } from './books.service';
+import { BookWordsPageQuery } from './dto/book-words-page.query';
+import { BookWordsQuery } from './dto/book-words.query';
 import { CreateBookDto } from './dto/create-book.dto';
 import { TextFileValidator } from './text-file.validator';
 
@@ -39,6 +47,44 @@ export class BooksController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<BookDetails> {
     return this.booksService.findOne(user.id, id);
+  }
+
+  /**
+   * Deletes the book. Words left in none of the user's books leave their
+   * dictionary too.
+   */
+  @Delete('book/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    return this.booksService.remove(user.id, id);
+  }
+
+  /** A page of the book's words to learn; the book carries the first 100. */
+  @Get('book/:id/words-to-learn')
+  wordsToLearnPage(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: BookWordsPageQuery,
+  ): Promise<BookWordsPage> {
+    return this.booksService.wordsToLearnPage(
+      user.id,
+      id,
+      query.page,
+      query.pageSize,
+    );
+  }
+
+  /** The book's words in one status, e.g. the names found in it. */
+  @Get('book/:id/words')
+  wordsWithStatus(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: BookWordsQuery,
+  ): Promise<WordCount[]> {
+    return this.booksService.wordsWithStatus(user.id, id, query.status);
   }
 
   /**

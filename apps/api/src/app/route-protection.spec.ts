@@ -91,6 +91,9 @@ describe('route protection', () => {
             findAll: resolves([]),
             findOne: resolves({}),
             create: resolves({}),
+            wordsWithStatus: resolves([]),
+            wordsToLearnPage: resolves({}),
+            remove: resolves(undefined),
           },
         },
         {

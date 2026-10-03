@@ -4,6 +4,8 @@ export const BOOK_FILE_MAX_SIZE = 1024 * 1024;
 export const BOOK_NAME_MAX_LENGTH = 1000;
 export const BOOK_DESCRIPTION_MAX_LENGTH = 5000;
 export const BOOK_TOP_WORDS_LIMIT = 100;
+/** Largest page of a book's words to learn. */
+export const BOOK_WORDS_MAX_PAGE_SIZE = 100;
 
 /** A word of a book that the reader hasn't learned yet. */
 export interface WordCount {
@@ -35,6 +37,8 @@ export interface BookDetails extends BookSummary {
    * left out.
    */
   words: WordCount[];
+  /** All of the book's words to learn, for paging past `words`. */
+  wordsToLearnCount: number;
 }
 
 /** Multipart fields sent with the uploaded file to `POST /api/book`. */
@@ -55,4 +59,14 @@ export interface UploadedBook extends BookDetails {
    * (found in the names list and capitalized in the text), most used first.
    */
   markedAsNames: string[];
+}
+
+/** A page of a book's words to learn, most used first. */
+export interface BookWordsPage {
+  items: WordCount[];
+  /** All of the book's words to learn. */
+  total: number;
+  /** 1-based. */
+  page: number;
+  pageSize: number;
 }

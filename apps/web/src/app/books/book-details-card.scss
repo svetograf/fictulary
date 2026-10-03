@@ -119,3 +119,10 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mat-sys-error);
+}

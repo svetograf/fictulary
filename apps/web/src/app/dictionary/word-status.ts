@@ -47,3 +47,9 @@ export const NAME_KIND_LABELS: Record<NameKind, string> = {
   [NameKind.COUNTRY]: 'country',
   [NameKind.LAKE]: 'lake',
 };
+
+/**
+ * "Restore" on name lists: a word wrongly taken for a name goes back to
+ * Unknown, like any other word new to the dictionary.
+ */
+export const RESTORE_STATUS = WordStatus.UNKNOWN;

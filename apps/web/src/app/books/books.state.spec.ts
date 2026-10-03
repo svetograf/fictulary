@@ -7,7 +7,15 @@ import { HttpEventType } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { BookDetails, BookSummary, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
-import { LoadBook, LoadBooks, ResetUpload, UploadFile } from './books.actions';
+import {
+  DeleteBook,
+  LoadBook,
+  LoadBookWords,
+  LoadBookNames,
+  LoadBooks,
+  ResetUpload,
+  UploadFile,
+} from './books.actions';
 import { SignOut } from '../auth/auth.actions';
 import {
   ChangeWordStatusSuccess,
@@ -30,6 +38,7 @@ const book: BookDetails = {
     { wordId: '1', word: 'be', count: 2, status: WordStatus.LEARNING },
     { wordId: '2', word: 'cat', count: 1, status: WordStatus.UNKNOWN },
   ],
+  wordsToLearnCount: 2,
 };
 
 describe('BooksState', () => {
@@ -233,6 +242,12 @@ describe('BooksState', () => {
       bookCount: 1,
     });
 
+    /** The shown page is reloaded after a word leaves it. */
+    const expectRefill = (items = [book.words[1]], total = 1) =>
+      http
+        .expectOne((r) => r.url === '/api/book/1/words-to-learn')
+        .flush({ items, total, page: 1, pageSize: 100 });
+
     beforeEach(() => {
       store.dispatch(new LoadBook(1));
       http.expectOne('/api/book/1').flush(book);
@@ -244,6 +259,7 @@ describe('BooksState', () => {
       store.dispatch(
         new ChangeWordStatusSuccess(dictionaryWord('1', WordStatus.KNOWN)),
       );
+      expectRefill();
 
       for (const shown of [
         store.selectSnapshot(BooksState.currentBook),
@@ -282,6 +298,7 @@ describe('BooksState', () => {
         store.dispatch(
           new ChangeWordStatusSuccess(dictionaryWord('2', status)),
         );
+        expectRefill([book.words[0]]);
         expect(
           store
             .selectSnapshot(BooksState.currentBook)
@@ -296,6 +313,210 @@ describe('BooksState', () => {
         new ChangeWordStatusSuccess(dictionaryWord('99', WordStatus.KNOWN)),
       );
       expect(store.selectSnapshot(BooksState.currentBook)).toBe(before);
+    });
+  });
+
+  describe('paging the words to learn', () => {
+    const wordsPage = (
+      page: number,
+      pageSize: number,
+      ids: string[],
+      total = 250,
+    ) => ({
+      items: ids.map((id) => ({
+        wordId: id,
+        word: `w${id}`,
+        count: 1,
+        status: WordStatus.UNKNOWN,
+      })),
+      total,
+      page,
+      pageSize,
+    });
+    const pageRequest = () =>
+      http.expectOne((r) => r.url === '/api/book/1/words-to-learn');
+
+    beforeEach(() => {
+      store.dispatch(new LoadBook(1));
+      http.expectOne('/api/book/1').flush({ ...book, wordsToLearnCount: 250 });
+    });
+
+    it('starts with the words that come with the book', () => {
+      expect(store.selectSnapshot(BooksState.currentWords)).toMatchObject({
+        items: book.words,
+        total: 250,
+        page: 1,
+        pageSize: 100,
+      });
+    });
+
+    it('loads another page, keeping the shown one until it arrives', () => {
+      store.dispatch(new LoadBookWords(1, 2, 100));
+      expect(store.selectSnapshot(BooksState.currentWords)).toMatchObject({
+        items: book.words,
+        page: 1,
+        requested: { page: 2, pageSize: 100 },
+        loading: true,
+      });
+
+      const req = pageRequest();
+      expect(req.request.params.get('page')).toBe('2');
+      expect(req.request.params.get('pageSize')).toBe('100');
+      req.flush(wordsPage(2, 100, ['101', '102']));
+
+      expect(store.selectSnapshot(BooksState.currentWords)).toMatchObject({
+        page: 2,
+        total: 250,
+        loading: false,
+      });
+      expect(
+        store
+          .selectSnapshot(BooksState.currentWords)
+          .items.map((w) => w.wordId),
+      ).toEqual(['101', '102']);
+    });
+
+    it('steps back from a page past the end', () => {
+      store.dispatch(new LoadBookWords(1, 9, 100));
+      pageRequest().flush(wordsPage(9, 100, []));
+
+      const back = pageRequest();
+      expect(back.request.params.get('page')).toBe('3');
+      back.flush(wordsPage(3, 100, ['201']));
+      expect(store.selectSnapshot(BooksState.currentWords).page).toBe(3);
+    });
+
+    it('keeps the request it failed on, so it is not retried in a loop', () => {
+      store.dispatch(new LoadBookWords(1, 2, 100));
+      pageRequest().flush(
+        { message: 'Boom' },
+        { status: 500, statusText: 'Error' },
+      );
+
+      expect(store.selectSnapshot(BooksState.currentWords)).toMatchObject({
+        page: 1,
+        requested: { page: 2, pageSize: 100 },
+        error: 'Boom',
+        loading: false,
+      });
+    });
+
+    it('refills the page when a word leaves it, with one fewer in total', () => {
+      store.dispatch(
+        new ChangeWordStatusSuccess({
+          wordId: '1',
+          word: 'be',
+          status: WordStatus.KNOWN,
+          count: 2,
+          bookCount: 1,
+        }),
+      );
+      expect(store.selectSnapshot(BooksState.currentWords).total).toBe(249);
+
+      const refill = pageRequest();
+      expect(refill.request.params.get('page')).toBe('1');
+      refill.flush(wordsPage(1, 100, ['2', '3'], 249));
+      expect(
+        store
+          .selectSnapshot(BooksState.currentWords)
+          .items.map((w) => w.wordId),
+      ).toEqual(['2', '3']);
+    });
+  });
+
+  describe('reviewing names', () => {
+    const names = [
+      { wordId: '1', word: 'tom', count: 40, status: WordStatus.NAME },
+      { wordId: '2', word: 'becky', count: 12, status: WordStatus.NAME },
+    ];
+
+    it("loads the book's names", () => {
+      store.dispatch(new LoadBookNames(9));
+      expect(store.selectSnapshot(BooksState.reviewLoading)).toBe(true);
+
+      const req = http.expectOne((r) => r.url === '/api/book/9/words');
+      expect(req.request.params.get('status')).toBe('NAME');
+      req.flush(names);
+
+      expect(store.selectSnapshot(BooksState.reviewNames)).toEqual(names);
+      expect(store.selectSnapshot(BooksState.reviewLoading)).toBe(false);
+    });
+
+    it('records load errors', () => {
+      store.dispatch(new LoadBookNames(9));
+      http
+        .expectOne((r) => r.url === '/api/book/9/words')
+        .flush(
+          { message: 'Book 9 not found' },
+          { status: 404, statusText: 'Not Found' },
+        );
+      expect(store.selectSnapshot(BooksState.reviewError)).toBe(
+        'Book 9 not found',
+      );
+    });
+
+    it('keeps changed names in the list with their new status', () => {
+      store.dispatch(new LoadBookNames(9));
+      http.expectOne((r) => r.url === '/api/book/9/words').flush(names);
+
+      store.dispatch(
+        new ChangeWordStatusSuccess({
+          wordId: '1',
+          word: 'tom',
+          status: WordStatus.UNKNOWN,
+          count: 40,
+          bookCount: 1,
+        }),
+      );
+
+      expect(
+        store.selectSnapshot(BooksState.reviewNames).map((w) => w.status),
+      ).toEqual([WordStatus.UNKNOWN, WordStatus.NAME]);
+    });
+
+    it('is cleared for the next upload', () => {
+      store.dispatch(new LoadBookNames(9));
+      http.expectOne((r) => r.url === '/api/book/9/words').flush(names);
+      store.dispatch(new ResetUpload());
+      expect(store.selectSnapshot(BooksState.reviewNames)).toEqual([]);
+    });
+  });
+
+  describe('deleting a book', () => {
+    beforeEach(() => {
+      store.dispatch(new LoadBooks());
+      http.expectOne('/api/books').flush([summary, { ...summary, id: 2 }]);
+      store.dispatch(new LoadBook(1));
+      http.expectOne('/api/book/1').flush(book);
+    });
+
+    it('removes it from the list and the open book', () => {
+      store.dispatch(new DeleteBook(1));
+      expect(store.selectSnapshot(BooksState.deletingIds)).toEqual([1]);
+
+      const req = http.expectOne('/api/book/1');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+
+      expect(store.selectSnapshot(BooksState.books).map((b) => b.id)).toEqual([
+        2,
+      ]);
+      expect(store.selectSnapshot(BooksState.currentBook)).toBeNull();
+      expect(store.selectSnapshot(BooksState.deletingIds)).toEqual([]);
+    });
+
+    it('keeps everything when the delete fails', () => {
+      store.dispatch(new DeleteBook(1));
+      http
+        .expectOne('/api/book/1')
+        .flush(
+          { message: 'Book 1 not found' },
+          { status: 404, statusText: 'Not Found' },
+        );
+
+      expect(store.selectSnapshot(BooksState.books)).toHaveLength(2);
+      expect(store.selectSnapshot(BooksState.currentBook)).toEqual(book);
+      expect(store.selectSnapshot(BooksState.deletingIds)).toEqual([]);
     });
   });
 

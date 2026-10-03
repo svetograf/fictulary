@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { BookSummary } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
@@ -20,7 +22,12 @@ const book: BookSummary = {
 };
 
 describe('BookListPage', () => {
-  const booksService = { loadBooks: vi.fn() };
+  const booksService = { loadBooks: vi.fn(), deleteBook: vi.fn() };
+  /** The confirmation dialog's answer. */
+  let confirmed = true;
+  const dialog = {
+    open: vi.fn(() => ({ afterClosed: () => of(confirmed) })),
+  };
 
   const render = async ({ signedIn = true } = {}) => {
     if (signedIn) {
@@ -40,6 +47,7 @@ describe('BookListPage', () => {
         provideRouter([]),
         provideStore([AuthState, BooksState]),
         { provide: BooksService, useValue: booksService },
+        { provide: MatDialog, useValue: dialog },
       ],
     }).compileComponents();
   });
@@ -57,7 +65,7 @@ describe('BookListPage', () => {
     expect(
       element.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
     ).toBe('Sign in');
-    expect(element.querySelector('a[mat-list-item]')).toBeNull();
+    expect(element.querySelector('.books a')).toBeNull();
   });
 
   it('switches to the guest view on sign-out', async () => {
@@ -68,7 +76,7 @@ describe('BookListPage', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Sign in to see your books',
     );
-    expect(fixture.nativeElement.querySelector('a[mat-list-item]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.books a')).toBeNull();
   });
 
   it('links each book to its page', async () => {
@@ -77,7 +85,7 @@ describe('BookListPage', () => {
     await fixture.whenStable();
 
     const link = fixture.nativeElement.querySelector(
-      'a[mat-list-item]',
+      '.books a',
     ) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/book/5');
     expect(link.textContent).toContain('A Tale of Two Cities');
@@ -98,5 +106,43 @@ describe('BookListPage', () => {
     expect(alert.textContent).toContain('Server is down');
     alert.querySelector('button').click();
     expect(booksService.loadBooks).toHaveBeenCalledTimes(2);
+  });
+
+  describe('deleting', () => {
+    const deleteButton = async () => {
+      const fixture = await render();
+      TestBed.inject(Store).dispatch(new LoadBooksSuccess([book]));
+      await fixture.whenStable();
+      return (
+        fixture.nativeElement as HTMLElement
+      ).querySelector<HTMLButtonElement>('.books li button');
+    };
+
+    it('asks for confirmation, then deletes the book', async () => {
+      confirmed = true;
+      const button = await deleteButton();
+      expect(button?.getAttribute('aria-label')).toBe(
+        'Delete A Tale of Two Cities',
+      );
+
+      button?.click();
+
+      expect(dialog.open).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          data: expect.objectContaining({
+            title: 'Delete “A Tale of Two Cities”?',
+            confirm: 'Delete',
+          }),
+        }),
+      );
+      expect(booksService.deleteBook).toHaveBeenCalledWith(5);
+    });
+
+    it('keeps the book when the user cancels', async () => {
+      confirmed = false;
+      (await deleteButton())?.click();
+      expect(booksService.deleteBook).not.toHaveBeenCalled();
+    });
   });
 });
