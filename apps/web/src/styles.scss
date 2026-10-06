@@ -55,3 +55,21 @@ body {
   background: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
 }
+
+// Plain links use the primary color (#b12d00, 4.8:1 on the background)
+// instead of the browser's blue and purple. Material buttons rendered as
+// links set their own colors.
+a {
+  color: var(--mat-sys-primary);
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: #872000; // primary tone 30
+  }
+
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
