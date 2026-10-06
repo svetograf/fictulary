@@ -1,7 +1,27 @@
+@use '@angular/material' as mat;
+
+// Brand orange header with light text and icons.
 mat-toolbar {
   gap: 12px;
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
+  @include mat.toolbar-overrides(
+    (
+      container-background-color: #f85525,
+      container-text-color: #ffffff,
+    )
+  );
+  @include mat.button-overrides(
+    (
+      text-label-text-color: #ffffff,
+      text-state-layer-color: #ffffff,
+      text-ripple-color: color-mix(in srgb, #ffffff 12%, transparent),
+      // "Sign up": a white pill, inverted from the usual filled button.
+      filled-container-color: #ffffff,
+      filled-label-text-color: var(--mat-sys-primary),
+      filled-state-layer-color: var(--mat-sys-primary),
+      filled-ripple-color:
+        color-mix(in srgb, var(--mat-sys-primary) 12%, transparent),
+    )
+  );
 }
 
 h1 {
