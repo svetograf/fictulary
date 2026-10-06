@@ -1,4 +1,5 @@
 @use '@angular/material' as mat;
+@use '../shared/status-chip';
 
 .subtitle {
   display: flex;
@@ -57,13 +58,7 @@
   border-radius: 999px;
   font: var(--mat-sys-label-medium);
   white-space: nowrap;
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
-
-  &[data-status='UNKNOWN'] {
-    background: var(--mat-sys-surface-container-highest);
-    color: var(--mat-sys-on-surface-variant);
-  }
+  @include status-chip.colors;
 }
 
 .all-known {

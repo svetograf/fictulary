@@ -1,3 +1,5 @@
+@use '../shared/status-chip';
+
 :host {
   display: flex;
   flex-direction: column;
@@ -77,23 +79,7 @@
   border-radius: 999px;
   font: var(--mat-sys-label-medium);
   white-space: nowrap;
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
-
-  &[data-status='NAME'] {
-    background: var(--mat-sys-tertiary-container);
-    color: var(--mat-sys-on-tertiary-container);
-  }
-
-  &[data-status='UNKNOWN'] {
-    background: var(--mat-sys-surface-container-highest);
-    color: var(--mat-sys-on-surface-variant);
-  }
-
-  &[data-status='KNOWN'] {
-    background: var(--mat-sys-primary-container);
-    color: var(--mat-sys-on-primary-container);
-  }
+  @include status-chip.colors;
 }
 
 .usage {
