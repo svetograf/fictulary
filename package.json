@@ -2,7 +2,11 @@
   "name": "fictulary",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "start:api": "nx serve api",
+    "start:web": "nx serve web",
+    "migration:run": "nx run api:migration-run"
+  },
   "private": true,
   "devDependencies": {
     "@angular-devkit/core": "~22.1.0",
