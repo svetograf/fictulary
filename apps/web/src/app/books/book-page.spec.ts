@@ -3,6 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { By } from '@angular/platform-browser';
+import { NavController } from '@ionic/angular';
 import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -51,6 +52,7 @@ describe('BookPage', () => {
   /** Answers both the word dialog (ignored) and delete confirmations. */
   const dialog = { open: vi.fn(() => ({ afterClosed: () => of(true) })) };
   const snackBar = { open: vi.fn() };
+  const nav = { navigateBack: vi.fn() };
   let harness: RouterTestingHarness;
 
   beforeEach(async () => {
@@ -66,6 +68,7 @@ describe('BookPage', () => {
         { provide: DictionaryService, useValue: dictionary },
         { provide: MatSnackBar, useValue: snackBar },
         { provide: MatDialog, useValue: dialog },
+        { provide: NavController, useValue: nav },
       ],
     });
     harness = await RouterTestingHarness.create();
@@ -77,6 +80,17 @@ describe('BookPage', () => {
 
     await harness.navigateByUrl('/book/4', BookPage);
     expect(booksService.loadBook).toHaveBeenLastCalledWith(4);
+  });
+
+  it('reloads the book when shown again from the navigation stack', async () => {
+    await harness.navigateByUrl('/book/3', BookPage);
+    const page = harness.routeDebugElement?.componentInstance as BookPage;
+    page.ionViewWillEnter(); // the first visit, already loaded
+    expect(booksService.loadBook).toHaveBeenCalledTimes(1);
+
+    page.ionViewWillEnter();
+    expect(booksService.loadBook).toHaveBeenCalledTimes(2);
+    expect(booksService.loadBook).toHaveBeenLastCalledWith(3);
   });
 
   it('shows the book details and the words left to learn', async () => {
@@ -234,13 +248,12 @@ describe('BookPage', () => {
 
     it('goes back to the list once the book is deleted', async () => {
       await harness.navigateByUrl('/book/3', BookPage);
-      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
       TestBed.inject(Store).dispatch(new DeleteBookSuccess(4)); // another book
-      expect(navigate).not.toHaveBeenCalledWith('/');
+      expect(nav.navigateBack).not.toHaveBeenCalled();
 
       TestBed.inject(Store).dispatch(new DeleteBookSuccess(3));
-      expect(navigate).toHaveBeenCalledWith('/');
+      expect(nav.navigateBack).toHaveBeenCalledWith('/');
     });
   });
 

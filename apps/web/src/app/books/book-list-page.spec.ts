@@ -57,6 +57,15 @@ describe('BookListPage', () => {
     expect(booksService.loadBooks).toHaveBeenCalledTimes(1);
   });
 
+  it('reloads the books when shown again from the navigation stack', async () => {
+    const page = (await render()).componentInstance;
+    page.ionViewWillEnter(); // the first visit, already loaded
+    expect(booksService.loadBooks).toHaveBeenCalledTimes(1);
+
+    page.ionViewWillEnter();
+    expect(booksService.loadBooks).toHaveBeenCalledTimes(2);
+  });
+
   it('asks guests to sign in instead of loading books', async () => {
     const fixture = await render({ signedIn: false });
     expect(booksService.loadBooks).not.toHaveBeenCalled();

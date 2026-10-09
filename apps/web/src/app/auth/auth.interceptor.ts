@@ -7,6 +7,7 @@ import {
   NavigationError,
   Router,
 } from '@angular/router';
+import { NavController } from '@ionic/angular';
 import { Store } from '@ngxs/store';
 import { catchError, filter, take, throwError } from 'rxjs';
 import { SignOut } from './auth.actions';
@@ -24,6 +25,7 @@ const PUBLIC_AUTH_URLS = ['/api/sign-in', '/api/sign-up'];
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const store = inject(Store);
   const router = inject(Router);
+  const nav = inject(NavController);
   const token = store.selectSnapshot(AuthState.token);
 
   if (
@@ -41,7 +43,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse && error.status === 401) {
         store.dispatch(new SignOut());
-        leaveRestrictedPage(router);
+        leaveRestrictedPage(router, nav);
       }
       return throwError(() => error);
     }),
@@ -53,10 +55,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
  * navigation is in progress (e.g. the profile request on app load), waits
  * for it to finish first, since `router.url` still shows the old page.
  */
-function leaveRestrictedPage(router: Router): void {
+function leaveRestrictedPage(router: Router, nav: NavController): void {
   const redirect = () => {
     if (isRestricted(router.routerState.snapshot.root)) {
-      router.navigate(['/sign-in'], {
+      // As the root: the pages in the stack need a session.
+      nav.navigateRoot(['/sign-in'], {
         queryParams: { returnUrl: router.url },
       });
     }

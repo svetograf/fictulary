@@ -12,6 +12,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
+import {
+  IonContent,
+  IonRouterLinkWithHref,
+  NavController,
+  ViewWillEnter,
+} from '@ionic/angular';
 import { Actions, ofActionSuccessful, select } from '@ngxs/store';
 import { filter } from 'rxjs';
 import { DeleteBookSuccess } from './books.actions';
@@ -25,6 +31,8 @@ import { BooksState } from './books.state';
 @Component({
   selector: 'app-book-page',
   imports: [
+    IonContent,
+    IonRouterLinkWithHref,
     RouterLink,
     MatButtonModule,
     MatIconModule,
@@ -33,10 +41,13 @@ import { BooksState } from './books.state';
   ],
   templateUrl: './book-page.html',
   styleUrl: './book-page.scss',
+  // Pages in ion-router-outlet need this class for layout and transitions.
+  host: { class: 'ion-page' },
 })
-export class BookPage {
+export class BookPage implements ViewWillEnter {
   private readonly booksService = inject(BooksService);
   private readonly router = inject(Router);
+  private readonly nav = inject(NavController);
 
   /** Bound from the `:id` route parameter. */
   readonly id = input.required({ transform: numberAttribute });
@@ -89,18 +100,29 @@ export class BookPage {
       });
     });
     // Back to the list once this book is gone.
-    const router = this.router;
+    const nav = this.nav;
     inject(Actions)
       .pipe(
         ofActionSuccessful(DeleteBookSuccess),
         filter(({ id }: DeleteBookSuccess) => id === this.id()),
         takeUntilDestroyed(),
       )
-      .subscribe(() => router.navigateByUrl('/'));
+      .subscribe(() => nav.navigateBack('/'));
     effect(() => {
       const id = this.id();
       untracked(() => this.booksService.loadBook(id));
     });
+  }
+
+  /** Ionic keeps this page alive under the pages opened from it. */
+  private visited = false;
+
+  /** Back from another page: refresh, as a newly opened page would. */
+  ionViewWillEnter(): void {
+    if (this.visited) {
+      this.booksService.loadBook(this.id());
+    }
+    this.visited = true;
   }
 
   protected changePage(event: PageEvent): void {

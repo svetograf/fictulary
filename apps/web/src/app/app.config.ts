@@ -11,6 +11,7 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideIonicAngular } from '@ionic/angular';
 import { withNgxsReduxDevtoolsPlugin } from '@ngxs/devtools-plugin';
 import { Store, provideStore, withNgxsDevelopmentOptions } from '@ngxs/store';
 import { appRoutes } from './app.routes';
@@ -23,6 +24,9 @@ import { DictionaryState } from './dictionary/dictionary.state';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    // Material Design mode, to sit next to the Angular Material components
+    // until they are replaced with Ionic ones.
+    provideIonicAngular({ mode: 'md' }),
     provideRouter(appRoutes, withComponentInputBinding()),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideStore(

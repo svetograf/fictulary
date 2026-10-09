@@ -17,6 +17,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
+import { IonContent, ViewWillEnter } from '@ionic/angular';
 import {
   DICTIONARY_DEFAULT_PAGE_SIZE,
   DictionaryWord,
@@ -67,6 +68,7 @@ const EMPTY_MESSAGES: Record<WordStatus, string> = {
 @Component({
   selector: 'app-dictionary-page',
   imports: [
+    IonContent,
     DecimalPipe,
     RouterLink,
     MatButtonModule,
@@ -78,8 +80,10 @@ const EMPTY_MESSAGES: Record<WordStatus, string> = {
   ],
   templateUrl: './dictionary-page.html',
   styleUrl: './dictionary-page.scss',
+  // Pages in ion-router-outlet need this class for layout and transitions.
+  host: { class: 'ion-page' },
 })
-export class DictionaryPage {
+export class DictionaryPage implements ViewWillEnter {
   private readonly dictionary = inject(DictionaryService);
   private readonly router = inject(Router);
   /** "Next" in the dialog walks through the words on this page. */
@@ -136,6 +140,17 @@ export class DictionaryPage {
       untracked(() => this.dictionary.load(query));
     });
     notifyWordStatusErrors();
+  }
+
+  /** Ionic keeps this page alive under the pages opened from it. */
+  private visited = false;
+
+  /** Back from another page (e.g. a book): statuses may have changed. */
+  ionViewWillEnter(): void {
+    if (this.visited) {
+      this.dictionary.load(this.query());
+    }
+    this.visited = true;
   }
 
   protected setStatus(status: WordStatus): void {

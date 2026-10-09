@@ -54,8 +54,12 @@ describe('auth pages', () => {
   describe('SignUpPage', () => {
     beforeEach(() => harness.navigateByUrl('/sign-up'));
 
-    it('clears a stale error on open', () => {
-      expect(auth.clearError).toHaveBeenCalled();
+    it('clears a stale error each time it is shown', () => {
+      // Ionic's router outlet calls this; the plain one in tests doesn't.
+      const page = harness.routeDebugElement?.componentInstance as SignUpPage;
+      page.ionViewWillEnter();
+      page.ionViewWillEnter();
+      expect(auth.clearError).toHaveBeenCalledTimes(2);
     });
 
     it('validates before sending anything', async () => {

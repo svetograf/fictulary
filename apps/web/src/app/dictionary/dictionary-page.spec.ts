@@ -58,6 +58,24 @@ describe('DictionaryPage', () => {
     });
   });
 
+  it('reloads when shown again from the navigation stack', async () => {
+    await harness.navigateByUrl(
+      '/my-dictionary?status=LEARNING',
+      DictionaryPage,
+    );
+    const page = harness.routeDebugElement?.componentInstance as DictionaryPage;
+    page.ionViewWillEnter(); // the first visit, already loaded
+    expect(dictionary.load).toHaveBeenCalledTimes(1);
+
+    page.ionViewWillEnter();
+    expect(dictionary.load).toHaveBeenCalledTimes(2);
+    expect(dictionary.load).toHaveBeenLastCalledWith({
+      status: WordStatus.LEARNING,
+      page: 1,
+      pageSize: 50,
+    });
+  });
+
   it('reads the filter and page from the URL, ignoring invalid values', async () => {
     await harness.navigateByUrl(
       '/my-dictionary?status=LEARNING&page=3&pageSize=25',

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
+import { IonContent, ViewWillEnter } from '@ionic/angular';
 import { select } from '@ngxs/store';
 import { AuthState } from '../auth/auth.state';
 import { BooksService } from './books.service';
@@ -14,6 +15,7 @@ import { BooksState } from './books.state';
 @Component({
   selector: 'app-book-list-page',
   imports: [
+    IonContent,
     DatePipe,
     DecimalPipe,
     RouterLink,
@@ -24,8 +26,10 @@ import { BooksState } from './books.state';
   ],
   templateUrl: './book-list-page.html',
   styleUrl: './book-list-page.scss',
+  // Pages in ion-router-outlet need this class for layout and transitions.
+  host: { class: 'ion-page' },
 })
-export class BookListPage {
+export class BookListPage implements ViewWillEnter {
   protected readonly booksService = inject(BooksService);
 
   protected readonly signedIn = select(AuthState.isAuthenticated);
@@ -35,6 +39,9 @@ export class BookListPage {
   protected readonly loading = select(BooksState.booksLoading);
   protected readonly error = select(BooksState.booksError);
 
+  /** Ionic keeps this page alive under the pages opened from it. */
+  private visited = false;
+
   constructor() {
     // The API requires signing in; load once a session exists.
     effect(() => {
@@ -42,5 +49,13 @@ export class BookListPage {
         untracked(() => this.booksService.loadBooks());
       }
     });
+  }
+
+  /** Back from another page: refresh, as a newly opened page would. */
+  ionViewWillEnter(): void {
+    if (this.visited && this.signedIn()) {
+      this.booksService.loadBooks();
+    }
+    this.visited = true;
   }
 }

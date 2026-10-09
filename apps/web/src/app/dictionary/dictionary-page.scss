@@ -1,6 +1,6 @@
 @use '@angular/material' as mat;
 
-:host {
+.page-content {
   display: flex;
   flex-direction: column;
   gap: 16px;

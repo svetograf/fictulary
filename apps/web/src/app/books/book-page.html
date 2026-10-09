@@ -1,37 +1,41 @@
-<div class="toolbar">
-  <a mat-button routerLink="/" class="back">
-    <mat-icon>arrow_back</mat-icon>
-    All books
-  </a>
-  @if (book(); as current) {
-    <button
-      mat-stroked-button
-      type="button"
-      class="delete"
-      [disabled]="deleting().includes(current.id)"
-      (click)="deleteBook(current)"
-    >
-      <mat-icon>delete</mat-icon>
-      Delete book
-    </button>
-  }
-</div>
+<ion-content>
+  <div class="page-content">
+    <div class="toolbar">
+      <a mat-button routerLink="/" routerDirection="back" class="back">
+        <mat-icon>arrow_back</mat-icon>
+        All books
+      </a>
+      @if (book(); as current) {
+        <button
+          mat-stroked-button
+          type="button"
+          class="delete"
+          [disabled]="deleting().includes(current.id)"
+          (click)="deleteBook(current)"
+        >
+          <mat-icon>delete</mat-icon>
+          Delete book
+        </button>
+      }
+    </div>
 
-@if (loading()) {
-  <div class="status" role="status">
-    <mat-progress-spinner mode="indeterminate" diameter="32" />
-    <span>Loading book…</span>
+    @if (loading()) {
+      <div class="status" role="status">
+        <mat-progress-spinner mode="indeterminate" diameter="32" />
+        <span>Loading book…</span>
+      </div>
+    } @else if (error(); as message) {
+      <div class="status error" role="alert">
+        <mat-icon>error</mat-icon>
+        <span>{{ message }}</span>
+        <button mat-button (click)="retry()">Retry</button>
+      </div>
+    } @else if (book(); as current) {
+      <app-book-details-card
+        [book]="current"
+        [words]="words()"
+        (pageChange)="changePage($event)"
+      />
+    }
   </div>
-} @else if (error(); as message) {
-  <div class="status error" role="alert">
-    <mat-icon>error</mat-icon>
-    <span>{{ message }}</span>
-    <button mat-button (click)="retry()">Retry</button>
-  </div>
-} @else if (book(); as current) {
-  <app-book-details-card
-    [book]="current"
-    [words]="words()"
-    (pageChange)="changePage($event)"
-  />
-}
+</ion-content>

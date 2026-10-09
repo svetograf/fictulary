@@ -1,6 +1,12 @@
 @use '@angular/material' as mat;
 @use './theme-colors' as palette;
 
+// Ionic's required CSS. Its typography and utility sheets are left out
+// for now so they don't restyle the Angular Material components.
+@use '@ionic/angular/css/core.css';
+@use '@ionic/angular/css/normalize.css';
+@use '@ionic/angular/css/structure.css';
+
 // Light theme built from the brand colors:
 //   background #f6dcac, primary #f85525, secondary #028391, text #01204e,
 //   lines and accents #faa968.
@@ -44,9 +50,41 @@ html {
   );
 }
 
+// Ionic colors from the same brand values, for components migrated to
+// Ionic. Primary uses the deeper Material tone so it reads as text.
+:root {
+  --ion-font-family: Roboto, 'Helvetica Neue', sans-serif;
+  --ion-background-color: #f6dcac;
+  --ion-background-color-rgb: 246, 220, 172;
+  --ion-text-color: #01204e;
+  --ion-text-color-rgb: 1, 32, 78;
+  --ion-border-color: #faa968;
+
+  --ion-color-primary: #b12d00;
+  --ion-color-primary-rgb: 177, 45, 0;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #9c2800;
+  --ion-color-primary-tint: #b9421a;
+
+  --ion-color-secondary: #028391;
+  --ion-color-secondary-rgb: 2, 131, 145;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #027380;
+  --ion-color-secondary-tint: #1b8f9c;
+}
+
 html,
 body {
   height: 100%;
+}
+
+// The content column of each page, inside its ion-content.
+.page-content {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
 }
 
 body {

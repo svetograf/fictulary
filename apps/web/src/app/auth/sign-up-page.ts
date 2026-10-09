@@ -1,11 +1,4 @@
-import {
-  Component,
-  OnInit,
-  effect,
-  inject,
-  input,
-  signal,
-} from '@angular/core';
+import { Component, effect, inject, input, signal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -18,7 +11,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
+import { IonContent, NavController, ViewWillEnter } from '@ionic/angular';
 import {
   USER_EMAIL_MAX_LENGTH,
   USER_NAME_MAX_LENGTH,
@@ -34,6 +28,7 @@ import { AuthState } from './auth.state';
 @Component({
   selector: 'app-sign-up-page',
   imports: [
+    IonContent,
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
@@ -45,10 +40,12 @@ import { AuthState } from './auth.state';
   ],
   templateUrl: './sign-up-page.html',
   styleUrl: './auth-page.scss',
+  // Pages in ion-router-outlet need this class for layout and transitions.
+  host: { class: 'ion-page' },
 })
-export class SignUpPage implements OnInit {
+export class SignUpPage implements ViewWillEnter {
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
+  private readonly nav = inject(NavController);
 
   /** Where to go after signing up; bound from the query string. */
   readonly returnUrl = input<string>();
@@ -95,7 +92,8 @@ export class SignUpPage implements OnInit {
   constructor() {
     effect(() => {
       if (this.signedIn()) {
-        this.router.navigateByUrl(safeReturnUrl(this.returnUrl()));
+        // As the root, so Back doesn't return to this form.
+        this.nav.navigateRoot(safeReturnUrl(this.returnUrl()));
       }
     });
     effect(() => {
@@ -107,7 +105,8 @@ export class SignUpPage implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  // Also when coming back from the other auth page, which Ionic keeps alive.
+  ionViewWillEnter(): void {
     this.auth.clearError();
   }
 

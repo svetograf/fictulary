@@ -18,8 +18,11 @@ mat-toolbar {
       filled-container-color: #ffffff,
       filled-label-text-color: var(--mat-sys-primary),
       filled-state-layer-color: var(--mat-sys-primary),
-      filled-ripple-color:
-        color-mix(in srgb, var(--mat-sys-primary) 12%, transparent),
+      filled-ripple-color: color-mix(
+          in srgb,
+          var(--mat-sys-primary) 12%,
+          transparent
+        ),
     )
   );
 }
@@ -29,10 +32,15 @@ h1 {
   margin: 0;
 }
 
-main {
-  max-width: 960px;
-  margin: 24px auto;
-  padding: 0 16px;
+// The Material toolbar draws its own background and shadow.
+ion-header {
+  box-shadow: none;
+}
+
+// Fills the space under the header; Ionic positions it over the whole app.
+ion-router-outlet {
+  position: relative;
+  flex: 1;
 }
 
 nav {

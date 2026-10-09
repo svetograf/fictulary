@@ -1,21 +1,27 @@
-<mat-stepper linear labelPosition="bottom" class="wizard">
-  <mat-step label="Upload" [completed]="!!uploaded()" [editable]="false">
-    <app-upload-form />
-  </mat-step>
+<ion-content>
+  <div class="page-content">
+    <mat-stepper linear labelPosition="bottom" class="wizard">
+      <mat-step label="Upload" [completed]="!!uploaded()" [editable]="false">
+        <app-upload-form />
+      </mat-step>
 
-  <mat-step label="Review names" [completed]="reviewed()">
-    @if (uploaded()) {
-      <app-names-review (continue)="showBook()" />
-    }
-  </mat-step>
+      <mat-step label="Review names" [completed]="reviewed()">
+        @if (uploaded()) {
+          <app-names-review (continue)="showBook()" />
+        }
+      </mat-step>
 
-  <mat-step label="Book">
-    @if (reviewed() && uploaded(); as book) {
-      <div class="done">
-        <mat-icon class="done-icon">task_alt</mat-icon>
-        <p>You're all set. Discover the book words now →</p>
-        <a mat-flat-button [routerLink]="['/book', book.id]">Lead me there!</a>
-      </div>
-    }
-  </mat-step>
-</mat-stepper>
+      <mat-step label="Book">
+        @if (reviewed() && uploaded(); as book) {
+          <div class="done">
+            <mat-icon class="done-icon">task_alt</mat-icon>
+            <p>You're all set. Discover the book words now →</p>
+            <a mat-flat-button [routerLink]="['/book', book.id]"
+              >Lead me there!</a
+            >
+          </div>
+        }
+      </mat-step>
+    </mat-stepper>
+  </div>
+</ion-content>

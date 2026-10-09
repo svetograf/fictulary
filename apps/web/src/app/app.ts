@@ -4,21 +4,26 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import {
-  Router,
-  RouterLink,
-  RouterLinkActive,
-  RouterOutlet,
-} from '@angular/router';
+  IonApp,
+  IonHeader,
+  IonRouterLinkWithHref,
+  IonRouterOutlet,
+  NavController,
+} from '@ionic/angular';
 import { select } from '@ngxs/store';
 import { AuthService } from './auth/auth.service';
 import { AuthState } from './auth/auth.state';
 
 @Component({
   imports: [
-    RouterOutlet,
     RouterLink,
     RouterLinkActive,
+    IonApp,
+    IonHeader,
+    IonRouterOutlet,
+    IonRouterLinkWithHref,
     MatToolbarModule,
     MatButtonModule,
     MatDividerModule,
@@ -31,7 +36,7 @@ import { AuthState } from './auth/auth.state';
 })
 export class App {
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
+  private readonly nav = inject(NavController);
 
   protected readonly title = 'Fictulary';
   protected readonly signedIn = select(AuthState.isAuthenticated);
@@ -39,6 +44,6 @@ export class App {
 
   protected signOut(): void {
     this.auth.signOut();
-    this.router.navigateByUrl('/');
+    this.nav.navigateRoot('/');
   }
 }

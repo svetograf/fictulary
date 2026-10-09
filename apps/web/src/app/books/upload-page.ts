@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatStepper, MatStepperModule } from '@angular/material/stepper';
 import { RouterLink } from '@angular/router';
+import { IonContent } from '@ionic/angular';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofActionDispatched, select } from '@ngxs/store';
 import { UploadFileSuccess } from './books.actions';
@@ -31,6 +32,7 @@ enum Step {
 @Component({
   selector: 'app-upload-page',
   imports: [
+    IonContent,
     RouterLink,
     MatButtonModule,
     MatIconModule,
@@ -40,10 +42,13 @@ enum Step {
   ],
   templateUrl: './upload-page.html',
   styleUrl: './upload-page.scss',
+  // Pages in ion-router-outlet need this class for layout and transitions.
+  host: { class: 'ion-page' },
 })
 export class UploadPage {
   private readonly books = inject(BooksService);
   private readonly injector = inject(Injector);
+  private readonly content = viewChild.required(IonContent);
   private readonly stepper = viewChild.required(MatStepper);
 
   protected readonly uploaded = select(BooksState.uploadedBook);
@@ -79,7 +84,7 @@ export class UploadPage {
       () => {
         this.stepper().selectedIndex = step;
         // The previous step may have been scrolled (e.g. a long form).
-        window.scrollTo({ top: 0 });
+        this.content().scrollToTop();
       },
       { injector: this.injector },
     );
