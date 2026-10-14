@@ -13,7 +13,7 @@
   gap: 16px;
 
   h2 {
-    font: var(--mat-sys-headline-small);
+    font-size: 24px;
     margin: 0;
     overflow-wrap: anywhere;
   }
@@ -21,18 +21,24 @@
 
 .hint {
   margin: -8px 0 0;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--ion-color-medium);
 }
 
 .continue {
   flex: none;
+  margin: 0;
 }
 
 .error {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--mat-sys-error);
+  color: var(--ion-color-danger);
+
+  ion-icon {
+    flex: none;
+    font-size: 24px;
+  }
 }
 
 .words {
@@ -46,7 +52,7 @@
     align-items: center;
     gap: 12px;
     padding: 8px 0;
-    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    border-bottom: 1px solid var(--ion-border-color);
   }
 }
 
@@ -56,17 +62,18 @@
   padding: 4px 8px;
   margin-left: -8px;
   border: 0;
-  border-radius: var(--mat-sys-corner-small);
+  border-radius: 4px;
   background: none;
-  color: var(--mat-sys-primary);
-  font: var(--mat-sys-title-medium);
+  color: var(--ion-color-primary);
+  font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
   overflow-wrap: anywhere;
   text-align: left;
 
   &:hover,
   &:focus-visible {
-    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+    background: color-mix(in srgb, var(--ion-color-primary) 8%, transparent);
     outline: none;
   }
 }
@@ -77,20 +84,25 @@
   gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
-  font: var(--mat-sys-label-medium);
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
   @include status-chip.colors;
 }
 
 .usage {
-  color: var(--mat-sys-on-surface-variant);
-  font: var(--mat-sys-body-small);
+  color: var(--ion-color-medium);
+  font-size: 12px;
   white-space: nowrap;
 }
 
 .actions {
   display: flex;
   gap: 8px;
+
+  ion-button {
+    margin: 0;
+  }
 }
 
 .empty {
@@ -99,11 +111,9 @@
   align-items: center;
   gap: 8px;
   padding: 32px 16px;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--ion-color-medium);
 
-  mat-icon {
-    width: 48px;
-    height: 48px;
+  ion-icon {
     font-size: 48px;
   }
 }
@@ -123,7 +133,7 @@
     flex-wrap: wrap;
   }
 
-  .actions button {
+  .actions ion-button {
     flex: 1 1 auto;
     white-space: nowrap;
   }

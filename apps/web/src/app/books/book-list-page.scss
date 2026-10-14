@@ -12,7 +12,7 @@
   gap: 16px;
 
   h2 {
-    font: var(--mat-sys-headline-small);
+    font-size: 24px;
     margin: 0;
   }
 }
@@ -21,7 +21,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--mat-sys-error);
+  color: var(--ion-color-danger);
+
+  ion-icon {
+    flex: none;
+    font-size: 24px;
+  }
 }
 
 .empty {
@@ -30,20 +35,18 @@
   align-items: center;
   gap: 8px;
   padding: 48px 16px;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--ion-color-medium);
   text-align: center;
 
-  mat-icon {
-    width: 48px;
-    height: 48px;
+  ion-icon {
     font-size: 48px;
   }
 }
 
 .guest {
   h2 {
-    font: var(--mat-sys-headline-small);
-    color: var(--mat-sys-on-surface);
+    font-size: 24px;
+    color: var(--ion-text-color);
     margin: 8px 0 0;
   }
 
@@ -59,55 +62,38 @@
 }
 
 .books {
-  list-style: none;
-  margin: 0;
   padding: 0;
+  background: transparent;
+}
 
-  li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid var(--mat-sys-outline-variant);
-  }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--ion-border-color);
 }
 
 .book {
-  display: flex;
   flex: 1;
   min-width: 0;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 8px;
-  border-radius: var(--mat-sys-corner-small);
-  color: inherit;
-  text-decoration: none;
+  --border-radius: 4px;
+  --padding-start: 8px;
 
-  &:hover,
-  &:focus-visible {
-    background: color-mix(in srgb, var(--mat-sys-on-surface) 6%, transparent);
-    outline: none;
+  ion-icon {
+    color: var(--ion-color-medium);
   }
-
-  mat-icon {
-    flex: none;
-    color: var(--mat-sys-on-surface-variant);
-  }
-}
-
-.text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
 }
 
 .title {
-  font: var(--mat-sys-body-large);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .details {
-  font: var(--mat-sys-body-medium);
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--ion-color-medium);
+}
+
+.delete {
+  --color: var(--ion-color-medium);
 }

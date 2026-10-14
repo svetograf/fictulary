@@ -1,18 +1,25 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterLink } from '@angular/router';
-import { IonContent, NavController, ViewWillEnter } from '@ionic/angular';
+import {
+  IonButton,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
+  IonContent,
+  IonIcon,
+  IonInput,
+  IonInputPasswordToggle,
+  IonSpinner,
+  NavController,
+  ViewWillEnter,
+} from '@ionic/angular';
 import {
   USER_EMAIL_MAX_LENGTH,
   USER_NAME_MAX_LENGTH,
@@ -28,15 +35,18 @@ import { AuthState } from './auth.state';
 @Component({
   selector: 'app-sign-up-page',
   imports: [
+    IonButton,
+    IonCard,
+    IonCardContent,
+    IonCardHeader,
+    IonCardTitle,
     IonContent,
+    IonIcon,
+    IonInput,
+    IonInputPasswordToggle,
+    IonSpinner,
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
   ],
   templateUrl: './sign-up-page.html',
   styleUrl: './auth-page.scss',
@@ -54,7 +64,6 @@ export class SignUpPage implements ViewWillEnter {
   protected readonly error = select(AuthState.error);
   private readonly signedIn = select(AuthState.isAuthenticated);
 
-  protected readonly hidePassword = signal(true);
   protected readonly limits = {
     name: USER_NAME_MAX_LENGTH,
     passwordMin: USER_PASSWORD_MIN_LENGTH,
@@ -108,6 +117,17 @@ export class SignUpPage implements ViewWillEnter {
   // Also when coming back from the other auth page, which Ionic keeps alive.
   ionViewWillEnter(): void {
     this.auth.clearError();
+  }
+
+  protected passwordError(): string {
+    const { password } = this.controls;
+    if (password.hasError('minlength')) {
+      return `Password must be at least ${this.limits.passwordMin} characters.`;
+    }
+    if (password.hasError('maxlength')) {
+      return `Password must be at most ${this.limits.passwordMax} characters.`;
+    }
+    return 'Password is required.';
   }
 
   protected submit(): void {

@@ -10,6 +10,7 @@ import { Store, provideStore } from '@ngxs/store';
 import { ResetUpload, UploadFile } from './books.actions';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
+import { ionicUpdates } from '../shared/ionic-testing';
 import { UploadForm } from './upload-form';
 
 type Form = UploadForm['form'];
@@ -117,17 +118,16 @@ describe('UploadForm', () => {
   });
 
   it('adds all the words as known when the box is checked', async () => {
-    const checkbox = element.querySelector('mat-checkbox.all-known');
+    const checkbox = element.querySelector<HTMLIonCheckboxElement>(
+      'ion-checkbox.all-known',
+    );
     expect(checkbox?.textContent?.trim()).toBe(
       'Add all the words as known to my dictionary',
     );
-    const input = checkbox?.querySelector<HTMLInputElement>(
-      'input[type=checkbox]',
-    );
-    expect(input?.checked).toBe(false);
+    expect(checkbox?.checked).toBe(false);
 
     drop(txt('tale.txt'));
-    input?.click();
+    checkbox?.click();
     await TestBed.inject(ApplicationRef).whenStable();
     expect(form.controls.allKnown.value).toBe(true);
 
@@ -149,14 +149,14 @@ describe('UploadForm', () => {
       expect(form.controls.text.disabled).toBe(true);
       expect(element.querySelector('.drop-zone')).not.toBeNull();
       expect(
-        element.querySelector('textarea[formcontrolname=text]'),
+        element.querySelector('ion-textarea[formcontrolname=text]'),
       ).toBeNull();
 
       await pasteMode();
 
       expect(element.querySelector('.drop-zone')).toBeNull();
       expect(
-        element.querySelector('textarea[formcontrolname=text]'),
+        element.querySelector('ion-textarea[formcontrolname=text]'),
       ).not.toBeNull();
       // Only the active source is validated.
       expect(form.controls.file.disabled).toBe(true);
@@ -186,9 +186,10 @@ describe('UploadForm', () => {
       await pasteMode();
       form.controls.text.setValue('é'.repeat(1024));
       await fixture.whenStable();
-      expect(element.querySelector('mat-hint')?.textContent?.trim()).toBe(
-        '2 KB / 1 MB',
-      );
+      await ionicUpdates();
+      expect(
+        element.querySelector('ion-textarea.text .helper-text')?.textContent,
+      ).toBe('2 KB / 1 MB');
     });
 
     it('uploads the text as a .txt file', async () => {

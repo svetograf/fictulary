@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatTooltip } from '@angular/material/tooltip';
-import { By } from '@angular/platform-browser';
-import { NavController } from '@ionic/angular';
-import { of } from 'rxjs';
+import {
+  AlertController,
+  ModalController,
+  NavController,
+  ToastController,
+} from '@ionic/angular';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { Router } from '@angular/router';
@@ -14,6 +14,7 @@ import { Store, provideStore } from '@ngxs/store';
 import { ChangeWordStatusFail } from '../dictionary/dictionary.actions';
 import { DictionaryService } from '../dictionary/dictionary.service';
 import { DictionaryState } from '../dictionary/dictionary.state';
+import { ariaLabel, text } from '../shared/ionic-testing';
 import {
   DeleteBookSuccess,
   LoadBookFail,
@@ -49,14 +50,28 @@ describe('BookPage', () => {
     openWord: vi.fn(),
     closeWord: vi.fn(),
   };
-  /** Answers both the word dialog (ignored) and delete confirmations. */
-  const dialog = { open: vi.fn(() => ({ afterClosed: () => of(true) })) };
-  const snackBar = { open: vi.fn() };
+  /** Word dialogs close at once. */
+  const modals = {
+    create: vi.fn(async () => ({
+      present: async () => undefined,
+      onDidDismiss: async () => ({}),
+    })),
+  };
+  /** Delete confirmations are confirmed. */
+  const alerts = {
+    create: vi.fn(async () => ({
+      present: async () => undefined,
+      onDidDismiss: async () => ({ role: 'confirm' }),
+    })),
+  };
+  const toast = { present: vi.fn() };
+  const toasts = { create: vi.fn(async () => toast) };
+  const settle = () => new Promise((resolve) => setTimeout(resolve));
   const nav = { navigateBack: vi.fn() };
   let harness: RouterTestingHarness;
 
   beforeEach(async () => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
     TestBed.configureTestingModule({
       providers: [
         provideRouter(
@@ -66,8 +81,9 @@ describe('BookPage', () => {
         provideStore([BooksState, DictionaryState]),
         { provide: BooksService, useValue: booksService },
         { provide: DictionaryService, useValue: dictionary },
-        { provide: MatSnackBar, useValue: snackBar },
-        { provide: MatDialog, useValue: dialog },
+        { provide: ToastController, useValue: toasts },
+        { provide: ModalController, useValue: modals },
+        { provide: AlertController, useValue: alerts },
         { provide: NavController, useValue: nav },
       ],
     });
@@ -101,15 +117,13 @@ describe('BookPage', () => {
     const element = harness.routeNativeElement as HTMLElement;
     expect(element.textContent).toContain('Tale');
     expect(element.textContent).toContain('A classic');
-    const rows = [...element.querySelectorAll('tr[mat-row]')].map((row) =>
+    const rows = [...element.querySelectorAll('tbody tr')].map((row) =>
       // Rank, word, status and count; the actions column is tested below.
-      [...row.querySelectorAll('td:not(.actions)')].map((td) =>
-        td.textContent?.replace(/\s+/g, ' ').trim(),
-      ),
+      [...row.querySelectorAll('td:not(.actions)')].map((td) => text(td)),
     );
     expect(rows).toEqual([
-      ['1', 'be', 'school Learning', '6'],
-      ['2', 'cat', 'help_outline Unknown', '4'],
+      ['1', 'be', 'Learning', '6'],
+      ['2', 'cat', 'Unknown', '4'],
     ]);
   });
 
@@ -144,28 +158,24 @@ describe('BookPage', () => {
       await harness.fixture.whenStable();
       return [
         ...(harness.routeNativeElement as HTMLElement).querySelectorAll(
-          'tr[mat-row]',
+          'tbody tr',
         ),
       ].map((row) => [
-        ...row.querySelectorAll<HTMLButtonElement>('td.actions button'),
+        ...row.querySelectorAll<HTMLElement>('td.actions ion-button'),
       ]);
     };
 
     it('offers "I know" and "Learn" icon buttons with hover hints', async () => {
       const [, cat] = await showBook();
-      expect(cat.map((b) => b.getAttribute('aria-label'))).toEqual([
+      expect(cat.map((b) => ariaLabel(b))).toEqual([
         'I know: cat',
         'Learn: cat',
       ]);
       // Hover hints.
-      const tooltips = harness.fixture.debugElement
-        .queryAll(By.directive(MatTooltip))
-        .filter((el) => cat.includes(el.nativeElement))
-        .map((el) => el.injector.get(MatTooltip).message);
-      expect(tooltips).toEqual(['I know', 'Learn']);
+      expect(cat.map((b) => b.title)).toEqual(['I know', 'Learn']);
       expect(
-        cat.every((b) => b.classList.contains('mat-mdc-icon-button')),
-      ).toBe(true);
+        cat.map((b) => b.querySelector('ion-icon')?.getAttribute('slot')),
+      ).toEqual(['icon-only', 'icon-only']);
       expect(cat[1].classList).toContain('learn');
     });
 
@@ -210,7 +220,8 @@ describe('BookPage', () => {
           status: WordStatus.UNKNOWN,
         }),
       );
-      expect(dialog.open).toHaveBeenCalled();
+      expect(modals.create).toHaveBeenCalled();
+      await settle();
       expect(dictionary.closeWord).toHaveBeenCalled(); // our fake closes at once
     });
 
@@ -222,11 +233,14 @@ describe('BookPage', () => {
           'Could not reach the server. Please try again.',
         ),
       );
-      expect(snackBar.open).toHaveBeenCalledWith(
-        'Could not reach the server. Please try again.',
-        'Dismiss',
-        { duration: 5000 },
+      await settle();
+      expect(toasts.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Could not reach the server. Please try again.',
+          duration: 5000,
+        }),
       );
+      expect(toast.present).toHaveBeenCalled();
     });
   });
 
@@ -239,9 +253,10 @@ describe('BookPage', () => {
       const button = [
         ...(
           harness.routeNativeElement as HTMLElement
-        ).querySelectorAll<HTMLButtonElement>('.toolbar button'),
+        ).querySelectorAll<HTMLElement>('.toolbar ion-button'),
       ].find((b) => b.textContent?.includes('Delete book'));
       button?.click();
+      await settle();
 
       expect(booksService.deleteBook).toHaveBeenCalledWith(3);
     });
@@ -271,7 +286,7 @@ describe('BookPage', () => {
       expect(booksService.loadBookWords).not.toHaveBeenCalled();
       expect(
         harness.routeNativeElement
-          ?.querySelector('.mat-mdc-paginator-range-label')
+          ?.querySelector('app-paginator .range')
           ?.textContent?.trim(),
       ).toBe('1 – 100 of 250');
     });
@@ -300,8 +315,8 @@ describe('BookPage', () => {
 
     it('puts the chosen page in the URL', async () => {
       await open('/book/3');
-      const next = harness.routeNativeElement?.querySelector<HTMLButtonElement>(
-        '.mat-mdc-paginator-navigation-next',
+      const next = harness.routeNativeElement?.querySelector<HTMLElement>(
+        'app-paginator ion-button.next',
       );
       next?.click();
       await harness.fixture.whenStable();

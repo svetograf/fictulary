@@ -1,18 +1,25 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterLink } from '@angular/router';
-import { IonContent, NavController, ViewWillEnter } from '@ionic/angular';
+import {
+  IonButton,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
+  IonContent,
+  IonIcon,
+  IonInput,
+  IonInputPasswordToggle,
+  IonSpinner,
+  NavController,
+  ViewWillEnter,
+} from '@ionic/angular';
 import { select } from '@ngxs/store';
 import { safeReturnUrl } from './auth.guards';
 import { AuthService } from './auth.service';
@@ -21,15 +28,18 @@ import { AuthState } from './auth.state';
 @Component({
   selector: 'app-sign-in-page',
   imports: [
+    IonButton,
+    IonCard,
+    IonCardContent,
+    IonCardHeader,
+    IonCardTitle,
     IonContent,
+    IonIcon,
+    IonInput,
+    IonInputPasswordToggle,
+    IonSpinner,
     ReactiveFormsModule,
     RouterLink,
-    MatButtonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
   ],
   templateUrl: './sign-in-page.html',
   styleUrl: './auth-page.scss',
@@ -46,8 +56,6 @@ export class SignInPage implements ViewWillEnter {
   protected readonly submitting = select(AuthState.submitting);
   protected readonly error = select(AuthState.error);
   private readonly signedIn = select(AuthState.isAuthenticated);
-
-  protected readonly hidePassword = signal(true);
 
   protected readonly form = new FormGroup({
     email: new FormControl('', {

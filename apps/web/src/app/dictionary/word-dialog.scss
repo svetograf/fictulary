@@ -1,36 +1,39 @@
-@use '@angular/material' as mat;
 @use '../shared/status-chip';
 
 // Header and footer bands share a height; the word, status and close
 // button (and the footer buttons) are centered vertically in them.
-$band-height: 64px;
+ion-toolbar {
+  --min-height: 64px;
+}
 
 .header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: $band-height;
-  padding: 8px 8px 8px 24px;
-  box-sizing: border-box;
-  background: #f85525;
-  color: #ffffff;
+  --background: var(--app-brand);
+  --color: #ffffff;
+  --padding-start: 24px;
+  --padding-end: 8px;
+
+  ion-button {
+    --color: #ffffff;
+  }
+}
+
+.footer {
+  --background: var(--app-accent);
+  --padding-end: 16px;
+
+  ion-button {
+    margin-left: 8px;
+  }
 }
 
 .title {
-  flex: 1;
-  min-width: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
   margin: 0;
-  padding: 0;
-  color: inherit;
-
-  // Material's baseline spacer would push the word off center.
-  &::before {
-    display: none;
-  }
+  font-size: 22px;
+  font-weight: 400;
 }
 
 .word {
@@ -45,7 +48,8 @@ $band-height: 64px;
   border: 0;
   border-radius: 999px;
   cursor: pointer;
-  font: var(--mat-sys-label-large);
+  font-size: 14px;
+  font-weight: 500;
   @include status-chip.colors;
 
   &:hover:not(:disabled),
@@ -65,13 +69,15 @@ $band-height: 64px;
   }
 }
 
-.selected {
-  display: inline-flex;
-  margin-left: 16px;
-  vertical-align: middle;
+.status-menu {
+  padding: 4px 0;
 
-  mat-icon {
-    margin: 0;
+  .set-aside {
+    border-top: 1px solid var(--ion-border-color);
+  }
+
+  .selected {
+    margin-left: 16px;
   }
 }
 
@@ -93,13 +99,19 @@ $band-height: 64px;
 }
 
 .error {
-  color: var(--mat-sys-error);
+  color: var(--ion-color-danger);
+
+  ion-icon {
+    flex: none;
+    font-size: 24px;
+  }
 }
 
 .meaning {
   h4 {
     margin: 12px 0 4px;
-    font: var(--mat-sys-title-small);
+    font-size: 14px;
+    font-weight: 500;
     font-style: italic;
   }
 
@@ -114,7 +126,7 @@ $band-height: 64px;
 
   q {
     display: block;
-    color: var(--mat-sys-on-surface-variant);
+    color: var(--ion-color-medium);
     font-style: italic;
   }
 }
@@ -122,8 +134,8 @@ $band-height: 64px;
 .synonyms,
 .attribution {
   margin: 4px 0 0;
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
+  font-size: 12px;
+  color: var(--ion-color-medium);
 }
 
 .attribution {
@@ -133,11 +145,12 @@ $band-height: 64px;
 .usage {
   margin-top: 16px;
   padding-top: 8px;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-top: 1px solid var(--ion-border-color);
 
   h3 {
     margin: 8px 0 4px;
-    font: var(--mat-sys-title-small);
+    font-size: 14px;
+    font-weight: 500;
   }
 
   .total {
@@ -158,48 +171,12 @@ $band-height: 64px;
   }
 }
 
-mat-dialog-actions {
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  min-height: $band-height;
-  padding: 8px 16px;
-  box-sizing: border-box;
-  background: #faa968;
-}
-
-.close {
-  flex: none;
-  @include mat.icon-button-overrides(
-    (
-      icon-color: #ffffff,
-      state-layer-color: #ffffff,
-      ripple-color: color-mix(in srgb, #ffffff 12%, transparent),
-    )
-  );
-}
-
-// Accent (tertiary) color, like "Learn" on My dictionary.
-.know {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-tertiary),
-      filled-label-text-color: var(--mat-sys-on-tertiary),
-      filled-state-layer-color: var(--mat-sys-on-tertiary),
-      filled-ripple-color: color-mix(
-          in srgb,
-          var(--mat-sys-on-tertiary) 12%,
-          transparent
-        ),
-    )
-  );
-}
-
 .name-hint {
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 0 0 8px;
-  color: var(--mat-sys-tertiary);
-  font: var(--mat-sys-label-large);
+  color: var(--ion-color-tertiary);
+  font-size: 14px;
+  font-weight: 500;
 }

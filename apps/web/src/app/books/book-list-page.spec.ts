@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
-import { of } from 'rxjs';
+import { AlertController } from '@ionic/angular';
 import { provideRouter } from '@angular/router';
 import { BookSummary } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import { SignInSuccess, SignOut } from '../auth/auth.actions';
 import { AuthState } from '../auth/auth.state';
+import { ariaLabel } from '../shared/ionic-testing';
 import { authResponse } from '../auth/testing';
 import { LoadBooksFail, LoadBooksSuccess } from './books.actions';
 import { BookListPage } from './book-list-page';
@@ -23,11 +23,15 @@ const book: BookSummary = {
 
 describe('BookListPage', () => {
   const booksService = { loadBooks: vi.fn(), deleteBook: vi.fn() };
-  /** The confirmation dialog's answer. */
+  /** The confirmation alert's answer. */
   let confirmed = true;
-  const dialog = {
-    open: vi.fn(() => ({ afterClosed: () => of(confirmed) })),
+  const alerts = {
+    create: vi.fn(async () => ({
+      present: async () => undefined,
+      onDidDismiss: async () => ({ role: confirmed ? 'confirm' : 'cancel' }),
+    })),
   };
+  const settle = () => new Promise((resolve) => setTimeout(resolve));
 
   const render = async ({ signedIn = true } = {}) => {
     if (signedIn) {
@@ -39,7 +43,7 @@ describe('BookListPage', () => {
   };
 
   beforeEach(async () => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [BookListPage],
@@ -47,7 +51,7 @@ describe('BookListPage', () => {
         provideRouter([]),
         provideStore([AuthState, BooksState]),
         { provide: BooksService, useValue: booksService },
-        { provide: MatDialog, useValue: dialog },
+        { provide: AlertController, useValue: alerts },
       ],
     }).compileComponents();
   });
@@ -71,10 +75,11 @@ describe('BookListPage', () => {
     expect(booksService.loadBooks).not.toHaveBeenCalled();
     const element: HTMLElement = fixture.nativeElement;
     expect(element.textContent).toContain('Sign in to see your books');
-    expect(
-      element.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
-    ).toBe('Sign in');
-    expect(element.querySelector('.books a')).toBeNull();
+    const signIn = [...element.querySelectorAll('ion-button')].find(
+      (button) => (button as { href?: string }).href === '/sign-in',
+    );
+    expect(signIn?.textContent?.trim()).toBe('Sign in');
+    expect(element.querySelector('.books ion-item')).toBeNull();
   });
 
   it('switches to the guest view on sign-out', async () => {
@@ -85,7 +90,7 @@ describe('BookListPage', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Sign in to see your books',
     );
-    expect(fixture.nativeElement.querySelector('.books a')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.books ion-item')).toBeNull();
   });
 
   it('links each book to its page', async () => {
@@ -93,10 +98,8 @@ describe('BookListPage', () => {
     TestBed.inject(Store).dispatch(new LoadBooksSuccess([book]));
     await fixture.whenStable();
 
-    const link = fixture.nativeElement.querySelector(
-      '.books a',
-    ) as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/book/5');
+    const link = fixture.nativeElement.querySelector('.books ion-item');
+    expect(link.href).toBe('/book/5');
     expect(link.textContent).toContain('A Tale of Two Cities');
     expect(link.textContent).toContain('140,786 words');
   });
@@ -113,7 +116,7 @@ describe('BookListPage', () => {
 
     const alert = fixture.nativeElement.querySelector('[role=alert]');
     expect(alert.textContent).toContain('Server is down');
-    alert.querySelector('button').click();
+    alert.querySelector('ion-button').click();
     expect(booksService.loadBooks).toHaveBeenCalledTimes(2);
   });
 
@@ -122,28 +125,21 @@ describe('BookListPage', () => {
       const fixture = await render();
       TestBed.inject(Store).dispatch(new LoadBooksSuccess([book]));
       await fixture.whenStable();
-      return (
-        fixture.nativeElement as HTMLElement
-      ).querySelector<HTMLButtonElement>('.books li button');
+      return (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+        '.books .row ion-button',
+      );
     };
 
     it('asks for confirmation, then deletes the book', async () => {
       confirmed = true;
       const button = await deleteButton();
-      expect(button?.getAttribute('aria-label')).toBe(
-        'Delete A Tale of Two Cities',
-      );
+      expect(ariaLabel(button)).toBe('Delete A Tale of Two Cities');
 
       button?.click();
+      await settle();
 
-      expect(dialog.open).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          data: expect.objectContaining({
-            title: 'Delete “A Tale of Two Cities”?',
-            confirm: 'Delete',
-          }),
-        }),
+      expect(alerts.create).toHaveBeenCalledWith(
+        expect.objectContaining({ header: 'Delete “A Tale of Two Cities”?' }),
       );
       expect(booksService.deleteBook).toHaveBeenCalledWith(5);
     });
@@ -151,6 +147,8 @@ describe('BookListPage', () => {
     it('keeps the book when the user cancels', async () => {
       confirmed = false;
       (await deleteButton())?.click();
+      await settle();
+      expect(alerts.create).toHaveBeenCalled();
       expect(booksService.deleteBook).not.toHaveBeenCalled();
     });
   });

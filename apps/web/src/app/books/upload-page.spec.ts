@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { ModalController, ToastController } from '@ionic/angular';
 import { provideRouter } from '@angular/router';
 import { UploadedBook, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
@@ -40,7 +40,7 @@ describe('UploadPage (wizard)', () => {
   };
   const activeStep = (element: HTMLElement) =>
     element
-      .querySelector('.mat-step-header[aria-selected=true] .mat-step-label')
+      .querySelector('.steps [aria-current=step] .label')
       ?.textContent?.trim();
 
   beforeEach(() => {
@@ -50,7 +50,8 @@ describe('UploadPage (wizard)', () => {
         provideRouter([]),
         provideStore([BooksState, DictionaryState]),
         { provide: BooksService, useValue: books },
-        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        { provide: ModalController, useValue: { create: vi.fn() } },
+        { provide: ToastController, useValue: { create: vi.fn() } },
       ],
     });
     store = TestBed.inject(Store);
@@ -60,7 +61,7 @@ describe('UploadPage (wizard)', () => {
     const element: HTMLElement = (await render()).nativeElement;
     expect(books.reset).toHaveBeenCalled();
     expect(
-      [...element.querySelectorAll('.mat-step-label')].map((l) =>
+      [...element.querySelectorAll('.steps .label')].map((l) =>
         l.textContent?.trim(),
       ),
     ).toEqual(['Upload', 'Review names', 'Book']);
@@ -86,7 +87,7 @@ describe('UploadPage (wizard)', () => {
     await fixture.whenStable();
 
     (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('app-names-review button.continue')
+      .querySelector<HTMLElement>('app-names-review ion-button.continue')
       ?.click();
     await fixture.whenStable();
     await fixture.whenStable();
@@ -97,9 +98,11 @@ describe('UploadPage (wizard)', () => {
     expect(done?.querySelector('p')?.textContent?.trim()).toBe(
       "You're all set. Discover the book words now →",
     );
-    const link = done?.querySelector('a');
+    const link = done?.querySelector('ion-button');
     expect(link?.textContent?.trim()).toBe('Lead me there!');
-    expect(link?.getAttribute('href')).toBe('/book/9');
+    expect((link as { href?: string } | null | undefined)?.href).toBe(
+      '/book/9',
+    );
     // Only the message and the button: no book card here.
     expect(element.querySelector('app-book-details-card')).toBeNull();
   });
@@ -111,7 +114,7 @@ describe('UploadPage (wizard)', () => {
       await fixture.whenStable();
       await fixture.whenStable();
       (fixture.nativeElement as HTMLElement)
-        .querySelector<HTMLButtonElement>('app-names-review button.continue')
+        .querySelector<HTMLElement>('app-names-review ion-button.continue')
         ?.click();
       await fixture.whenStable();
       await fixture.whenStable();

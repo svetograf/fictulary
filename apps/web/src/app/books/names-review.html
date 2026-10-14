@@ -1,14 +1,9 @@
 <header class="review-header">
   <h2>Names in “{{ book()?.name }}”</h2>
-  <button
-    mat-flat-button
-    type="button"
-    class="continue"
-    (click)="continue.emit()"
-  >
+  <ion-button class="continue" (click)="continue.emit()">
     Continue
-    <mat-icon iconPositionEnd>arrow_forward</mat-icon>
-  </button>
+    <ion-icon slot="end" name="arrow-forward" />
+  </ion-button>
 </header>
 @if (names().length) {
   <p class="hint">
@@ -19,14 +14,14 @@
 }
 
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
+  <ion-progress-bar type="indeterminate" />
 }
 
 @if (error(); as message) {
   <div class="error" role="alert">
-    <mat-icon>error</mat-icon>
+    <ion-icon name="alert-circle-outline" aria-hidden="true" />
     <span>{{ message }}</span>
-    <button mat-button type="button" (click)="retry()">Retry</button>
+    <ion-button fill="clear" (click)="retry()">Retry</ion-button>
   </div>
 }
 
@@ -43,7 +38,7 @@
           {{ word.word }}
         </button>
         <span class="status" [attr.data-status]="word.status">
-          <mat-icon inline>{{ icons[word.status] }}</mat-icon>
+          <ion-icon [name]="icons[word.status]" aria-hidden="true" />
           {{ labels[word.status] }}
         </span>
         <span class="usage">
@@ -51,23 +46,22 @@
         </span>
         <span class="actions">
           @let action = actionFor(word);
-          <button
-            matButton="outlined"
-            type="button"
+          <ion-button
+            fill="outline"
             [disabled]="pending().includes(word.wordId)"
             [attr.aria-label]="action.label + ': ' + word.word"
             (click)="move(word, action.status)"
           >
-            <mat-icon>{{ action.icon }}</mat-icon>
+            <ion-icon slot="start" [name]="action.icon" />
             {{ action.label }}
-          </button>
+          </ion-button>
         </span>
       </li>
     }
   </ol>
 } @else if (!loading() && !error()) {
   <div class="empty">
-    <mat-icon>badge</mat-icon>
+    <ion-icon name="person-circle-outline" aria-hidden="true" />
     <p>No names were found in this book.</p>
   </div>
 }

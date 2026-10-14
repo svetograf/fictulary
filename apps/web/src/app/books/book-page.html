@@ -1,34 +1,39 @@
 <ion-content>
   <div class="page-content">
     <div class="toolbar">
-      <a mat-button routerLink="/" routerDirection="back" class="back">
-        <mat-icon>arrow_back</mat-icon>
+      <ion-button
+        fill="clear"
+        routerLink="/"
+        routerDirection="back"
+        class="back"
+      >
+        <ion-icon slot="start" name="arrow-back" />
         All books
-      </a>
+      </ion-button>
       @if (book(); as current) {
-        <button
-          mat-stroked-button
-          type="button"
+        <ion-button
+          fill="outline"
+          color="danger"
           class="delete"
           [disabled]="deleting().includes(current.id)"
           (click)="deleteBook(current)"
         >
-          <mat-icon>delete</mat-icon>
+          <ion-icon slot="start" name="trash-outline" />
           Delete book
-        </button>
+        </ion-button>
       }
     </div>
 
     @if (loading()) {
       <div class="status" role="status">
-        <mat-progress-spinner mode="indeterminate" diameter="32" />
+        <ion-spinner name="crescent" />
         <span>Loading book…</span>
       </div>
     } @else if (error(); as message) {
       <div class="status error" role="alert">
-        <mat-icon>error</mat-icon>
+        <ion-icon name="alert-circle-outline" aria-hidden="true" />
         <span>{{ message }}</span>
-        <button mat-button (click)="retry()">Retry</button>
+        <ion-button fill="clear" (click)="retry()">Retry</ion-button>
       </div>
     } @else if (book(); as current) {
       <app-book-details-card

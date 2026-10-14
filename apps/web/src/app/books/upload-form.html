@@ -1,30 +1,29 @@
-<mat-card appearance="outlined">
-  <mat-card-header>
-    <mat-card-title>Upload a book</mat-card-title>
-    <mat-card-subtitle>
+<ion-card>
+  <ion-card-header>
+    <ion-card-title>Upload a book</ion-card-title>
+    <ion-card-subtitle>
       We count every word in the text; the text itself is not stored.
-    </mat-card-subtitle>
-  </mat-card-header>
+    </ion-card-subtitle>
+  </ion-card-header>
 
-  <mat-card-content>
+  <ion-card-content>
     <form [formGroup]="form" (ngSubmit)="submit()" class="upload-form">
-      <mat-button-toggle-group
+      <ion-segment
         formControlName="source"
-        hideSingleSelectionIndicator
         aria-label="Where the text comes from"
         class="source"
       >
-        <mat-button-toggle value="file">
-          <mat-icon>upload_file</mat-icon>
-          From a file
-        </mat-button-toggle>
-        <mat-button-toggle value="text">
-          <mat-icon>content_paste</mat-icon>
-          Paste text
-        </mat-button-toggle>
-      </mat-button-toggle-group>
+        <ion-segment-button value="file" layout="icon-start">
+          <ion-icon name="cloud-upload-outline" aria-hidden="true" />
+          <ion-label>From a file</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="text" layout="icon-start">
+          <ion-icon name="clipboard-outline" aria-hidden="true" />
+          <ion-label>Paste text</ion-label>
+        </ion-segment-button>
+      </ion-segment>
 
-      @if (controls.source.value === 'file') {
+      @if (source() === 'file') {
         <div
           class="drop-zone"
           role="button"
@@ -49,109 +48,106 @@
             (change)="onFileInput($event)"
           />
           @if (controls.file.value; as selected) {
-            <mat-icon>description</mat-icon>
+            <ion-icon name="document-text-outline" aria-hidden="true" />
             <span class="file-name">{{ selected.name }}</span>
             <span class="file-size"
               >{{ selected.size / 1024 | number: '1.0-1' }} KB</span
             >
-            <button
-              mat-icon-button
-              type="button"
+            <ion-button
+              fill="clear"
+              shape="round"
+              color="medium"
+              class="remove"
               aria-label="Remove file"
               [disabled]="form.disabled"
               (click)="$event.stopPropagation(); clearFile()"
             >
-              <mat-icon>close</mat-icon>
-            </button>
+              <ion-icon slot="icon-only" name="close" />
+            </ion-button>
           } @else {
-            <mat-icon>upload_file</mat-icon>
+            <ion-icon name="cloud-upload-outline" aria-hidden="true" />
             <span>Drop a .txt file here or <strong>browse</strong></span>
             <span class="file-size">Up to {{ limits.fileSizeMb }} MB</span>
           }
         </div>
         @if (controls.file.touched) {
           @if (controls.file.hasError('required')) {
-            <mat-error>Please choose a file.</mat-error>
+            <ion-note color="danger" class="file-error"
+              >Please choose a file.</ion-note
+            >
           } @else if (controls.file.hasError('fileExtension')) {
-            <mat-error>Only .txt files are supported.</mat-error>
+            <ion-note color="danger" class="file-error"
+              >Only .txt files are supported.</ion-note
+            >
           } @else if (controls.file.hasError('maxFileSize')) {
-            <mat-error
-              >File must be {{ limits.fileSizeMb }} MB or smaller.</mat-error
+            <ion-note color="danger" class="file-error"
+              >File must be {{ limits.fileSizeMb }} MB or smaller.</ion-note
             >
           }
         }
       } @else {
-        <mat-form-field class="text">
-          <mat-label>Book text</mat-label>
-          <textarea
-            matInput
-            formControlName="text"
-            rows="10"
-            required
-            placeholder="Paste the text of the book here"
-          ></textarea>
-          <mat-hint align="end"
-            >{{ textKb() | number: '1.0-1' }} KB /
-            {{ limits.fileSizeMb }} MB</mat-hint
-          >
-          @if (controls.text.hasError('required')) {
-            <mat-error>Please paste some text.</mat-error>
-          } @else if (controls.text.hasError('maxTextBytes')) {
-            <mat-error
-              >Text must be {{ limits.fileSizeMb }} MB or smaller.</mat-error
-            >
-          }
-        </mat-form-field>
+        <ion-textarea
+          class="text"
+          label="Book text"
+          labelPlacement="floating"
+          fill="outline"
+          formControlName="text"
+          [rows]="10"
+          required
+          placeholder="Paste the text of the book here"
+          [helperText]="
+            (textKb() | number: '1.0-1') + ' KB / ' + limits.fileSizeMb + ' MB'
+          "
+          [errorText]="
+            controls.text.hasError('maxTextBytes')
+              ? 'Text must be ' + limits.fileSizeMb + ' MB or smaller.'
+              : 'Please paste some text.'
+          "
+        />
       }
 
-      <mat-form-field>
-        <mat-label>Book name</mat-label>
-        <input matInput formControlName="name" required />
-        <mat-hint align="end"
-          >{{ controls.name.value.length }} / {{ limits.name }}</mat-hint
-        >
-        @if (controls.name.hasError('required')) {
-          <mat-error>Book name is required.</mat-error>
-        } @else if (controls.name.hasError('maxlength')) {
-          <mat-error
-            >Book name must be at most {{ limits.name }} characters.</mat-error
-          >
-        }
-      </mat-form-field>
+      <ion-input
+        label="Book name"
+        labelPlacement="floating"
+        fill="outline"
+        formControlName="name"
+        required
+        [counter]="true"
+        [maxlength]="limits.name"
+        errorText="Book name is required."
+      />
 
-      <mat-form-field>
-        <mat-label>Description (optional)</mat-label>
-        <textarea matInput formControlName="description" rows="3"></textarea>
-        <mat-hint align="end">
-          {{ controls.description.value.length }} / {{ limits.description }}
-        </mat-hint>
-        @if (controls.description.hasError('maxlength')) {
-          <mat-error>
-            Description must be at most {{ limits.description }} characters.
-          </mat-error>
-        }
-      </mat-form-field>
+      <ion-textarea
+        label="Description (optional)"
+        labelPlacement="floating"
+        fill="outline"
+        formControlName="description"
+        [rows]="3"
+        [counter]="true"
+        [maxlength]="limits.description"
+      />
 
-      <mat-checkbox formControlName="allKnown" class="all-known">
+      <ion-checkbox
+        formControlName="allKnown"
+        labelPlacement="end"
+        justify="start"
+        class="all-known"
+      >
         Add all the words as known to my dictionary
-      </mat-checkbox>
+      </ion-checkbox>
 
       <div class="actions">
-        <button mat-flat-button type="submit" [disabled]="uploading()">
-          <mat-icon>cloud_upload</mat-icon>
+        <ion-button type="submit" [disabled]="uploading()">
+          <ion-icon slot="start" name="cloud-upload-outline" />
           Upload
-        </button>
+        </ion-button>
         @if (uploading()) {
           <div class="progress" role="status">
             @if (progress(); as percent) {
-              <mat-progress-spinner
-                mode="determinate"
-                [value]="percent"
-                diameter="32"
-              />
+              <ion-progress-bar [value]="percent / 100" />
               <span>Uploading… {{ percent }}%</span>
             } @else {
-              <mat-progress-spinner mode="indeterminate" diameter="32" />
+              <ion-spinner name="crescent" />
               <span>{{
                 progress() === null ? 'Counting words…' : 'Uploading…'
               }}</span>
@@ -160,9 +156,12 @@
         }
       </div>
     </form>
-  </mat-card-content>
-</mat-card>
+  </ion-card-content>
+</ion-card>
 
 @if (error(); as message) {
-  <p class="error" role="alert"><mat-icon>error</mat-icon> {{ message }}</p>
+  <p class="error" role="alert">
+    <ion-icon name="alert-circle-outline" aria-hidden="true" />
+    {{ message }}
+  </p>
 }

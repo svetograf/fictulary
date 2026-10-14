@@ -1,27 +1,55 @@
 <ion-content>
   <div class="page-content">
-    <mat-stepper linear labelPosition="bottom" class="wizard">
-      <mat-step label="Upload" [completed]="!!uploaded()" [editable]="false">
-        <app-upload-form />
-      </mat-step>
+    <ol class="steps" aria-label="Upload steps">
+      @for (label of stepLabels; track $index; let i = $index) {
+        <li
+          [class.active]="step() === i"
+          [class.complete]="step() > i"
+          [attr.aria-current]="step() === i ? 'step' : null"
+        >
+          @if (canGoBackTo(i)) {
+            <button type="button" class="step" (click)="goTo(i)">
+              <span class="number" aria-hidden="true">
+                <ion-icon name="checkmark" />
+              </span>
+              <span class="label">{{ label }}</span>
+            </button>
+          } @else {
+            <span class="step">
+              <span class="number" aria-hidden="true">
+                @if (step() > i) {
+                  <ion-icon name="checkmark" />
+                } @else {
+                  {{ i + 1 }}
+                }
+              </span>
+              <span class="label">{{ label }}</span>
+            </span>
+          }
+        </li>
+      }
+    </ol>
 
-      <mat-step label="Review names" [completed]="reviewed()">
+    @switch (step()) {
+      @case (Step.Upload) {
+        <app-upload-form />
+      }
+      @case (Step.ReviewNames) {
         @if (uploaded()) {
           <app-names-review (continue)="showBook()" />
         }
-      </mat-step>
-
-      <mat-step label="Book">
-        @if (reviewed() && uploaded(); as book) {
+      }
+      @case (Step.Book) {
+        @if (uploaded(); as book) {
           <div class="done">
-            <mat-icon class="done-icon">task_alt</mat-icon>
+            <ion-icon class="done-icon" name="checkmark-circle-outline" />
             <p>You're all set. Discover the book words now →</p>
-            <a mat-flat-button [routerLink]="['/book', book.id]"
-              >Lead me there!</a
+            <ion-button [routerLink]="['/book', book.id]"
+              >Lead me there!</ion-button
             >
           </div>
         }
-      </mat-step>
-    </mat-stepper>
+      }
+    }
   </div>
 </ion-content>

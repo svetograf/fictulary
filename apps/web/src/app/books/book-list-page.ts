@@ -1,11 +1,17 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, effect, inject, untracked } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
-import { IonContent, ViewWillEnter } from '@ionic/angular';
+import {
+  IonButton,
+  IonContent,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonProgressBar,
+  IonRouterLink,
+  ViewWillEnter,
+} from '@ionic/angular';
 import { select } from '@ngxs/store';
 import { AuthState } from '../auth/auth.state';
 import { BooksService } from './books.service';
@@ -15,14 +21,17 @@ import { BooksState } from './books.state';
 @Component({
   selector: 'app-book-list-page',
   imports: [
+    IonButton,
     IonContent,
+    IonIcon,
+    IonItem,
+    IonLabel,
+    IonList,
+    IonProgressBar,
+    IonRouterLink,
     DatePipe,
     DecimalPipe,
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatTooltipModule,
-    MatProgressBarModule,
   ],
   templateUrl: './book-list-page.html',
   styleUrl: './book-list-page.scss',

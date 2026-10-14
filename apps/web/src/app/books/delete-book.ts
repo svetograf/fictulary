@@ -1,9 +1,9 @@
 import { DestroyRef, inject } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { BookSummary } from '@fictulary/shared/models';
 import { Actions, ofActionDispatched } from '@ngxs/store';
 import { filter } from 'rxjs';
 import { injectConfirm } from '../shared/confirm-dialog';
+import { injectToast } from '../shared/toast';
 import { DeleteBookFail } from './books.actions';
 import { BooksService } from './books.service';
 
@@ -17,12 +17,10 @@ export function injectDeleteBook(): (
 ) => void {
   const books = inject(BooksService);
   const confirm = injectConfirm();
-  const snackBar = inject(MatSnackBar);
+  const toast = injectToast();
   const subscription = inject(Actions)
     .pipe(ofActionDispatched(DeleteBookFail))
-    .subscribe(({ error }: DeleteBookFail) =>
-      snackBar.open(error, 'Dismiss', { duration: 5000 }),
-    );
+    .subscribe(({ error }: DeleteBookFail) => toast(error));
   inject(DestroyRef).onDestroy(() => subscription.unsubscribe());
 
   return (book) =>

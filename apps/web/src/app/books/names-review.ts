@@ -1,8 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, inject, output } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { IonButton, IonIcon, IonProgressBar } from '@ionic/angular';
 import { WordCount, WordStatus } from '@fictulary/shared/models';
 import { select } from '@ngxs/store';
 import { DictionaryService } from '../dictionary/dictionary.service';
@@ -24,7 +22,7 @@ import { BooksState } from './books.state';
  */
 @Component({
   selector: 'app-names-review',
-  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [DecimalPipe, IonButton, IonIcon, IonProgressBar],
   templateUrl: './names-review.html',
   styleUrl: './names-review.scss',
 })
@@ -56,7 +54,7 @@ export class NamesReview {
    */
   protected actionFor(word: WordCount) {
     return word.status === WordStatus.NAME
-      ? { status: RESTORE_STATUS, label: 'Restore', icon: 'undo' }
+      ? { status: RESTORE_STATUS, label: 'Restore', icon: 'arrow-undo-outline' }
       : {
           status: WordStatus.NAME,
           label: 'Name',

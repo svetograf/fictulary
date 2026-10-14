@@ -1,13 +1,13 @@
 @let result = book();
-<mat-card appearance="outlined">
-  <mat-card-header>
-    <mat-card-title>{{ result.name }}</mat-card-title>
-    <mat-card-subtitle class="subtitle">
+<ion-card>
+  <ion-card-header>
+    <ion-card-title>{{ result.name }}</ion-card-title>
+    <ion-card-subtitle>
       Added
       {{ result.createdAt | date: 'mediumDate' }}
-    </mat-card-subtitle>
-  </mat-card-header>
-  <mat-card-content>
+    </ion-card-subtitle>
+  </ion-card-header>
+  <ion-card-content>
     @if (result.description) {
       <p class="description">{{ result.description }}</p>
     }
@@ -29,99 +29,98 @@
         most frequent first. Words you know are left out.
       </p>
       @if (words().loading) {
-        <mat-progress-bar mode="indeterminate" />
+        <ion-progress-bar type="indeterminate" />
       }
       @if (words().error; as message) {
         <p class="error" role="alert">
-          <mat-icon inline>error</mat-icon> {{ message }}
+          <ion-icon name="alert-circle-outline" aria-hidden="true" />
+          {{ message }}
         </p>
       }
-      <table mat-table [dataSource]="words().items" class="words">
-        <ng-container matColumnDef="rank">
-          <th mat-header-cell *matHeaderCellDef>#</th>
-          <td mat-cell *matCellDef="let row; let i = index">{{ rank(i) }}</td>
-        </ng-container>
-        <ng-container matColumnDef="word">
-          <th mat-header-cell *matHeaderCellDef>Word</th>
-          <td mat-cell *matCellDef="let row">
-            <button
-              type="button"
-              class="word"
-              [attr.aria-label]="'Show details for ' + row.word"
-              (click)="openWord(row)"
-            >
-              {{ row.word }}
-            </button>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
-          <td mat-cell *matCellDef="let row">
-            <span class="status" [attr.data-status]="row.status">
-              <mat-icon inline>{{ statusIcon(row.status) }}</mat-icon>
-              {{ statusLabel(row.status) }}
-            </span>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="count">
-          <th mat-header-cell *matHeaderCellDef>Count</th>
-          <td mat-cell *matCellDef="let row">
-            <div class="count">
-              <span
-                class="bar"
-                [style.width.%]="(row.count / maxWordCount()) * 100"
-              ></span>
-              <span>{{ row.count | number }}</span>
-            </div>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef>
-            <span class="visually-hidden">Actions</span>
-          </th>
-          <td mat-cell *matCellDef="let row" class="actions">
-            <button
-              mat-icon-button
-              type="button"
-              matTooltip="I know"
-              [attr.aria-label]="'I know: ' + row.word"
-              [disabled]="pending().includes(row.wordId)"
-              (click)="move(row, known)"
-            >
-              <mat-icon>{{ statusIcon(known) }}</mat-icon>
-            </button>
-            <!-- Hidden, not removed, for words already being learned, so
-                 the column stays aligned. -->
-            <button
-              mat-icon-button
-              type="button"
-              class="learn"
-              matTooltip="Learn"
-              [attr.aria-label]="'Learn: ' + row.word"
-              [class.hidden]="row.status === learning"
-              [disabled]="pending().includes(row.wordId)"
-              (click)="move(row, learning)"
-            >
-              <mat-icon>{{ statusIcon(learning) }}</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="wordColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: wordColumns"></tr>
+      <table class="words">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Word</th>
+            <th>Status</th>
+            <th>Count</th>
+            <th><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of words().items; track row.wordId; let i = $index) {
+            <tr>
+              <td>{{ rank(i) }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="word"
+                  [attr.aria-label]="'Show details for ' + row.word"
+                  (click)="openWord(row)"
+                >
+                  {{ row.word }}
+                </button>
+              </td>
+              <td>
+                <span class="status" [attr.data-status]="row.status">
+                  <ion-icon [name]="icons[row.status]" aria-hidden="true" />
+                  {{ labels[row.status] }}
+                </span>
+              </td>
+              <td>
+                <div class="count">
+                  <span
+                    class="bar"
+                    [style.width.%]="(row.count / maxWordCount()) * 100"
+                  ></span>
+                  <span>{{ row.count | number }}</span>
+                </div>
+              </td>
+              <td class="actions">
+                <ion-button
+                  fill="clear"
+                  shape="round"
+                  color="medium"
+                  title="I know"
+                  [attr.aria-label]="'I know: ' + row.word"
+                  [disabled]="pending().includes(row.wordId)"
+                  (click)="move(row, known)"
+                >
+                  <ion-icon slot="icon-only" [name]="icons[known]" />
+                </ion-button>
+                <!-- Hidden, not removed, for words already being learned, so
+                     the column stays aligned. -->
+                <ion-button
+                  fill="clear"
+                  shape="round"
+                  color="tertiary"
+                  class="learn"
+                  title="Learn"
+                  [attr.aria-label]="'Learn: ' + row.word"
+                  [class.hidden]="row.status === learning"
+                  [disabled]="pending().includes(row.wordId)"
+                  (click)="move(row, learning)"
+                >
+                  <ion-icon slot="icon-only" [name]="icons[learning]" />
+                </ion-button>
+              </td>
+            </tr>
+          }
+        </tbody>
       </table>
-      <mat-paginator
+      <app-paginator
         [length]="words().total"
-        [pageIndex]="words().page - 1"
+        [page]="words().page"
         [pageSize]="words().pageSize"
-        [pageSizeOptions]="pageSizes"
-        (page)="pageChange.emit($event)"
+        [pageSizes]="pageSizes"
+        (pageChange)="pageChange.emit($event)"
         aria-label="Choose page of words"
       />
     } @else {
       <p class="all-known">
-        <mat-icon>task_alt</mat-icon>
+        <ion-icon name="checkmark-circle-outline" aria-hidden="true" />
         You know every word in this book.
       </p>
     }
-  </mat-card-content>
-</mat-card>
+  </ion-card-content>
+</ion-card>

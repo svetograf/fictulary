@@ -11,19 +11,15 @@ import { AuthService } from './auth.service';
 import { AuthState } from './auth.state';
 import { SignInPage } from './sign-in-page';
 import { SignUpPage } from './sign-up-page';
+import { ionicUpdates, shownErrors, typeInto } from '../shared/ionic-testing';
 import { authResponse } from './testing';
 
 describe('auth pages', () => {
   const auth = { signUp: vi.fn(), signIn: vi.fn(), clearError: vi.fn() };
   let harness: RouterTestingHarness;
 
-  const fill = (selector: string, value: string) => {
-    const input = harness.routeNativeElement?.querySelector(
-      selector,
-    ) as HTMLInputElement;
-    input.value = value;
-    input.dispatchEvent(new Event('input'));
-  };
+  const fill = (selector: string, value: string) =>
+    typeInto(harness.routeNativeElement?.querySelector(selector), value);
   const submit = async () => {
     harness.routeNativeElement
       ?.querySelector('form')
@@ -63,14 +59,14 @@ describe('auth pages', () => {
     });
 
     it('validates before sending anything', async () => {
-      fill('input[formcontrolname=name]', '   ');
-      fill('input[formcontrolname=email]', 'not-an-email');
-      fill('input[formcontrolname=password]', 'short');
+      fill('ion-input[formcontrolname=name]', '   ');
+      fill('ion-input[formcontrolname=email]', 'not-an-email');
+      fill('ion-input[formcontrolname=password]', 'short');
       await submit();
 
       expect(auth.signUp).not.toHaveBeenCalled();
-      const errors = harness.routeNativeElement?.querySelectorAll('mat-error');
-      expect([...(errors ?? [])].map((e) => e.textContent?.trim())).toEqual([
+      await ionicUpdates();
+      expect(shownErrors(harness.routeNativeElement)).toEqual([
         'Name is required.',
         'Enter a valid email address.',
         'Password must be at least 8 characters.',
@@ -78,9 +74,9 @@ describe('auth pages', () => {
     });
 
     it('signs up with trimmed values', async () => {
-      fill('input[formcontrolname=name]', '  Ada ');
-      fill('input[formcontrolname=email]', ' ada@example.com ');
-      fill('input[formcontrolname=password]', 'secret123');
+      fill('ion-input[formcontrolname=name]', '  Ada ');
+      fill('ion-input[formcontrolname=email]', ' ada@example.com ');
+      fill('ion-input[formcontrolname=password]', 'secret123');
       await submit();
 
       expect(auth.signUp).toHaveBeenCalledWith({
@@ -96,7 +92,8 @@ describe('auth pages', () => {
       );
       await harness.fixture.whenStable();
       expect(
-        harness.routeNativeElement?.querySelector('[role=alert]')?.textContent,
+        harness.routeNativeElement?.querySelector('p.error[role=alert]')
+          ?.textContent,
       ).toContain('An account with this email already exists');
     });
   });
@@ -104,8 +101,8 @@ describe('auth pages', () => {
   describe('SignInPage', () => {
     it('signs in and returns to the requested page', async () => {
       await harness.navigateByUrl('/sign-in?returnUrl=%2Fbook%2F3');
-      fill('input[formcontrolname=email]', 'ada@example.com');
-      fill('input[formcontrolname=password]', 'secret123');
+      fill('ion-input[formcontrolname=email]', 'ada@example.com');
+      fill('ion-input[formcontrolname=password]', 'secret123');
       await submit();
       expect(auth.signIn).toHaveBeenCalledWith({
         email: 'ada@example.com',

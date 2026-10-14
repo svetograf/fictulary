@@ -7,22 +7,13 @@
 .upload-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 16px;
+  gap: 16px;
+  padding-top: 8px;
 }
 
 .source {
   align-self: flex-start;
-  margin-bottom: 8px;
-
-  mat-icon {
-    margin-right: 4px;
-    vertical-align: middle;
-  }
-}
-
-.text textarea {
-  min-height: 12em;
+  width: auto;
 }
 
 .drop-zone {
@@ -33,25 +24,29 @@
   gap: 8px;
   min-height: 96px;
   padding: 16px;
-  border: 2px dashed var(--mat-sys-outline-variant);
-  border-radius: var(--mat-sys-corner-medium);
-  color: var(--mat-sys-on-surface-variant);
+  border: 2px dashed var(--ion-border-color);
+  border-radius: 12px;
+  color: var(--ion-color-medium);
   cursor: pointer;
   text-align: center;
   transition:
     border-color 120ms,
     background-color 120ms;
 
+  > ion-icon {
+    font-size: 24px;
+  }
+
   &:hover,
   &:focus-visible,
   &.dragging {
-    border-color: var(--mat-sys-primary);
-    background: color-mix(in srgb, var(--mat-sys-primary) 6%, transparent);
+    border-color: var(--ion-color-primary);
+    background: color-mix(in srgb, var(--ion-color-primary) 6%, transparent);
     outline: none;
   }
 
   &.invalid {
-    border-color: var(--mat-sys-error);
+    border-color: var(--ion-color-danger);
   }
 
   &.disabled {
@@ -61,22 +56,22 @@
 }
 
 .file-name {
-  color: var(--mat-sys-on-surface);
+  color: var(--ion-text-color);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
 
-.file-size {
-  font: var(--mat-sys-body-small);
+.file-size,
+.file-error {
+  font-size: 12px;
 }
 
-mat-error {
-  font: var(--mat-sys-body-small);
-  margin-bottom: 8px;
+.file-error {
+  margin-top: -8px;
 }
 
-.all-known {
-  margin: 0 0 8px -8px;
+.text {
+  --min-height: 12em;
 }
 
 .actions,
@@ -86,10 +81,23 @@ mat-error {
   gap: 16px;
 }
 
+.actions ion-button {
+  margin: 0;
+}
+
+.progress ion-progress-bar {
+  width: 120px;
+}
+
 .error {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  color: var(--mat-sys-error);
+  color: var(--ion-color-danger);
+
+  ion-icon {
+    flex: none;
+    font-size: 24px;
+  }
 }

@@ -1,5 +1,83 @@
-.wizard {
-  background: transparent;
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// The step indicator: numbered circles joined by lines, labels below.
+.steps {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+
+    // The line to the previous step.
+    &:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      top: 16px;
+      right: calc(50% + 24px);
+      left: calc(-50% + 24px);
+      border-top: 1px solid var(--ion-border-color);
+    }
+  }
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ion-color-medium);
+  font: inherit;
+  font-size: 14px;
+}
+
+button.step {
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: color-mix(in srgb, var(--ion-color-primary) 8%, transparent);
+    outline: none;
+  }
+}
+
+.number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ion-text-color) 38%, transparent);
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.active,
+.complete {
+  .step {
+    color: var(--ion-text-color);
+  }
+
+  .number {
+    background: var(--ion-color-primary);
+  }
+}
+
+.active .label {
+  font-weight: 500;
 }
 
 .done {
@@ -12,13 +90,11 @@
 
   p {
     margin: 0;
-    font: var(--mat-sys-title-large);
+    font-size: 22px;
   }
 }
 
 .done-icon {
-  width: 56px;
-  height: 56px;
   font-size: 56px;
-  color: var(--mat-sys-primary);
+  color: var(--ion-color-primary);
 }

@@ -1,56 +1,59 @@
-@use '@angular/material' as mat;
-
 // Brand orange header with light text and icons.
-mat-toolbar {
+ion-toolbar {
+  --background: var(--app-brand);
+  --color: #ffffff;
+  --padding-start: 16px;
+  --padding-end: 8px;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  @include mat.toolbar-overrides(
-    (
-      container-background-color: #f85525,
-      container-text-color: #ffffff,
-    )
-  );
-  @include mat.button-overrides(
-    (
-      text-label-text-color: #ffffff,
-      text-state-layer-color: #ffffff,
-      text-ripple-color: color-mix(in srgb, #ffffff 12%, transparent),
-      // "Sign up": a white pill, inverted from the usual filled button.
-      filled-container-color: #ffffff,
-      filled-label-text-color: var(--mat-sys-primary),
-      filled-state-layer-color: var(--mat-sys-primary),
-      filled-ripple-color: color-mix(
-          in srgb,
-          var(--mat-sys-primary) 12%,
-          transparent
-        ),
-    )
-  );
+
+  > ion-icon {
+    flex: none;
+    font-size: 24px;
+  }
 }
 
 h1 {
-  font: var(--mat-sys-title-large);
   margin: 0;
+  font-size: 22px;
+  font-weight: 400;
 }
 
-// The Material toolbar draws its own background and shadow.
-ion-header {
-  box-shadow: none;
+nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+
+  ion-button {
+    --color: #ffffff;
+    --background-hover: #ffffff;
+    --background-focused: #ffffff;
+    margin: 0;
+    text-transform: none;
+  }
+
+  ion-button.active {
+    --background: rgb(255 255 255 / 12%);
+  }
+
+  // "Sign up": a white pill, inverted from the usual filled button.
+  ion-button.sign-up {
+    --background: #ffffff;
+    --color: var(--ion-color-primary);
+    --background-hover: var(--ion-color-primary);
+    --background-focused: var(--ion-color-primary);
+  }
 }
 
 // Fills the space under the header; Ionic positions it over the whole app.
 ion-router-outlet {
   position: relative;
   flex: 1;
-}
-
-nav {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-
-nav a.active {
-  background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
 .account-name {
@@ -65,10 +68,11 @@ nav a.active {
   flex-direction: column;
   gap: 2px;
   padding: 12px 16px;
-  font: var(--mat-sys-body-medium);
+  border-bottom: 1px solid var(--ion-border-color);
+  font-size: 14px;
 
   span {
-    color: var(--mat-sys-on-surface-variant);
+    color: var(--ion-color-medium);
   }
 }
 

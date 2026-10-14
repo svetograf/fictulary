@@ -3,7 +3,7 @@
   justify-content: center;
 }
 
-mat-card {
+ion-card {
   width: 100%;
   max-width: 420px;
 }
@@ -11,26 +11,34 @@ mat-card {
 form {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding-top: 16px;
+  gap: 16px;
+  padding-top: 8px;
 }
 
 .error {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 12px;
-  color: var(--mat-sys-error);
+  margin: 0;
+  color: var(--ion-color-danger);
+
+  ion-icon {
+    flex: none;
+    font-size: 20px;
+  }
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 8px;
+
+  ion-button {
+    margin: 0;
+  }
 }
 
 .switch {
   margin: 16px 0 0;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--ion-color-medium);
 }

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
+import { ModalController, ToastController } from '@ionic/angular';
 import {
   Router,
   provideRouter,
@@ -8,11 +8,11 @@ import {
 import { RouterTestingHarness } from '@angular/router/testing';
 import { WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
-import { of } from 'rxjs';
 import { LoadDictionarySuccess } from './dictionary.actions';
 import { DictionaryPage } from './dictionary-page';
 import { DictionaryService } from './dictionary.service';
 import { DictionaryState } from './dictionary.state';
+import { ariaLabel, text } from '../shared/ionic-testing';
 import { phone, word } from './testing';
 
 describe('DictionaryPage', () => {
@@ -22,7 +22,19 @@ describe('DictionaryPage', () => {
     openWord: vi.fn(),
     closeWord: vi.fn(),
   };
-  const dialog = { open: vi.fn(() => ({ afterClosed: () => of(undefined) })) };
+  /** Word dialogs close at once. */
+  const modals = {
+    create: vi.fn(async () => ({
+      present: async () => undefined,
+      onDidDismiss: async () => ({}),
+    })),
+  };
+  const settle = () => new Promise((resolve) => setTimeout(resolve));
+  const actionButtons = () => [
+    ...element().querySelectorAll<HTMLIonButtonElement>(
+      '.words li .actions ion-button',
+    ),
+  ];
   let harness: RouterTestingHarness;
 
   const element = () => harness.routeNativeElement as HTMLElement;
@@ -43,7 +55,8 @@ describe('DictionaryPage', () => {
         ),
         provideStore([DictionaryState]),
         { provide: DictionaryService, useValue: dictionary },
-        { provide: MatDialog, useValue: dialog },
+        { provide: ModalController, useValue: modals },
+        { provide: ToastController, useValue: { create: vi.fn() } },
       ],
     });
     harness = await RouterTestingHarness.create();
@@ -100,9 +113,11 @@ describe('DictionaryPage', () => {
 
   it('switches status through the header filter', async () => {
     await harness.navigateByUrl('/my-dictionary?page=4', DictionaryPage);
-    const toggles = element().querySelectorAll('mat-button-toggle button');
+    const toggles = element().querySelectorAll<HTMLElement>(
+      '.filter ion-segment-button',
+    );
     // Named for screen readers even when narrow screens hide the labels.
-    expect([...toggles].map((t) => t.getAttribute('aria-label'))).toEqual([
+    expect([...toggles].map((t) => ariaLabel(t))).toEqual([
       'Known',
       'Learning',
       'Unknown',
@@ -110,10 +125,18 @@ describe('DictionaryPage', () => {
       'Trash',
     ]);
     expect(
-      [...toggles].map((t) => t.querySelector('mat-icon')?.textContent),
-    ).toEqual(['task_alt', 'school', 'help_outline', 'badge', 'delete']);
+      [...toggles].map(
+        (t) => t.querySelector<HTMLIonIconElement>('ion-icon')?.name,
+      ),
+    ).toEqual([
+      'checkmark-circle-outline',
+      'school-outline',
+      'help-circle-outline',
+      'person-circle-outline',
+      'trash-outline',
+    ]);
 
-    (toggles[2] as HTMLButtonElement).click();
+    toggles[2].click();
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/my-dictionary?status=UNKNOWN');
@@ -130,27 +153,21 @@ describe('DictionaryPage', () => {
 
     const rows = element().querySelectorAll('.words li');
     expect(rows).toHaveLength(2);
-    expect(
-      rows[0].querySelector('.usage')?.textContent?.replace(/\s+/g, ' ').trim(),
-    ).toBe('10 uses · 1 book');
+    expect(text(rows[0].querySelector('.usage'))).toBe('10 uses · 1 book');
     const buttons = [
-      ...rows[0].querySelectorAll('.actions button'),
-    ] as HTMLButtonElement[];
-    expect(
-      buttons.map((b) => b.textContent?.replace(/\s+/g, ' ').trim()),
-    ).toEqual(['school Learn', 'help_outline Unknown']);
+      ...rows[0].querySelectorAll<HTMLIonButtonElement>('.actions ion-button'),
+    ];
+    expect(buttons.map((b) => text(b))).toEqual(['Learn', 'Unknown']);
     // The accessible name starts with the visible label.
-    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
+    expect(buttons.map((b) => ariaLabel(b))).toEqual([
       'Learn: word1',
       'Unknown: word1',
     ]);
     // "Learn" is the filled accent button; the others are outlined.
-    expect(buttons.map((b) => b.classList.contains('learn'))).toEqual([
-      true,
-      false,
+    expect(buttons.map((b) => [b.fill, b.color])).toEqual([
+      ['solid', 'tertiary'],
+      ['outline', 'primary'],
     ]);
-    expect(buttons[0].classList).toContain('mat-mdc-unelevated-button');
-    expect(buttons[1].classList).toContain('mat-mdc-outlined-button');
 
     buttons[0].click();
     expect(dictionary.changeStatus).toHaveBeenCalledWith(
@@ -166,10 +183,7 @@ describe('DictionaryPage', () => {
     );
     await show([word('1', WordStatus.LEARNING)], 1);
 
-    const labels = [
-      ...element().querySelectorAll('.words li .actions button'),
-    ].map((b) => b.textContent?.replace(/\s+/g, ' ').trim());
-    expect(labels).toEqual(['task_alt I know', 'help_outline Unknown']);
+    expect(actionButtons().map((b) => text(b))).toEqual(['I know', 'Unknown']);
   });
 
   it('opens the word dialog', async () => {
@@ -182,7 +196,8 @@ describe('DictionaryPage', () => {
     (element().querySelector('button.word') as HTMLButtonElement).click();
 
     expect(dictionary.openWord).toHaveBeenCalledWith(phone);
-    expect(dialog.open).toHaveBeenCalled();
+    expect(modals.create).toHaveBeenCalled();
+    await settle();
     expect(dictionary.closeWord).toHaveBeenCalled(); // our fake closes at once
   });
 
@@ -219,15 +234,9 @@ describe('DictionaryPage', () => {
     await harness.navigateByUrl('/my-dictionary?status=NAME', DictionaryPage);
     await show([word('1', WordStatus.NAME)], 1);
 
-    const buttons = [
-      ...element().querySelectorAll<HTMLButtonElement>(
-        '.words li .actions button',
-      ),
-    ];
-    expect(
-      buttons.map((b) => b.textContent?.replace(/\s+/g, ' ').trim()),
-    ).toEqual(['undo Restore']);
-    expect(buttons[0].getAttribute('aria-label')).toBe('Restore: word1');
+    const buttons = actionButtons();
+    expect(buttons.map((b) => text(b))).toEqual(['Restore']);
+    expect(ariaLabel(buttons[0])).toBe('Restore: word1');
 
     buttons[0].click();
     expect(dictionary.changeStatus).toHaveBeenCalledWith(
@@ -240,13 +249,10 @@ describe('DictionaryPage', () => {
     await harness.navigateByUrl('/my-dictionary?status=TRASH', DictionaryPage);
     await show([word('1', WordStatus.TRASH)], 1);
 
-    const labels = [
-      ...element().querySelectorAll('.words li .actions button'),
-    ].map((b) => b.textContent?.replace(/\s+/g, ' ').trim());
-    expect(labels).toEqual([
-      'task_alt I know',
-      'school Learn',
-      'help_outline Unknown',
+    expect(actionButtons().map((b) => text(b))).toEqual([
+      'I know',
+      'Learn',
+      'Unknown',
     ]);
   });
 });

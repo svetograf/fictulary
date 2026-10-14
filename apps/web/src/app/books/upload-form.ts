@@ -14,14 +14,24 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import {
+  IonButton,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardSubtitle,
+  IonCardTitle,
+  IonCheckbox,
+  IonIcon,
+  IonInput,
+  IonLabel,
+  IonNote,
+  IonProgressBar,
+  IonSegment,
+  IonSegmentButton,
+  IonSpinner,
+  IonTextarea,
+} from '@ionic/angular';
 import {
   BOOK_DESCRIPTION_MAX_LENGTH,
   BOOK_FILE_MAX_SIZE,
@@ -50,14 +60,22 @@ const PASTED_FILE_NAME = 'pasted-text.txt';
   imports: [
     DecimalPipe,
     ReactiveFormsModule,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatCheckboxModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
+    IonButton,
+    IonCard,
+    IonCardContent,
+    IonCardHeader,
+    IonCardSubtitle,
+    IonCardTitle,
+    IonCheckbox,
+    IonIcon,
+    IonInput,
+    IonLabel,
+    IonNote,
+    IonProgressBar,
+    IonSegment,
+    IonSegmentButton,
+    IonSpinner,
+    IonTextarea,
   ],
   templateUrl: './upload-form.html',
   styleUrl: './upload-form.scss',
@@ -113,6 +131,11 @@ export class UploadForm {
   });
 
   protected readonly controls = this.form.controls;
+
+  /** The active source, also when set in code (e.g. on reset). */
+  protected readonly source = toSignal(this.controls.source.valueChanges, {
+    initialValue: this.controls.source.value,
+  });
 
   /** Pasted text size, as uploaded. */
   protected readonly textKb = computed(

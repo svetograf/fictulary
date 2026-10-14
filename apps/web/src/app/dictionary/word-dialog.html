@@ -1,60 +1,69 @@
 @if (word(); as current) {
-  <div class="header">
-    <h2 mat-dialog-title class="title">
-      <span class="word">{{ current.word }}</span>
-      <button
-        type="button"
-        class="status"
-        [attr.data-status]="current.status"
-        [matMenuTriggerFor]="statusMenu"
-        [disabled]="pending().includes(current.wordId)"
-        [attr.aria-label]="
-          'Status: ' + labels[current.status] + '. Change status'
-        "
-      >
-        <mat-icon inline>{{ icons[current.status] }}</mat-icon>
-        {{ labels[current.status] }}
-        <mat-icon inline class="caret">arrow_drop_down</mat-icon>
-      </button>
-    </h2>
-    <mat-menu #statusMenu="matMenu">
-      @for (status of statuses; track status) {
-        @if (status === setAside[0]) {
-          <!-- Below: words not worth learning. -->
-          <mat-divider />
-        }
+  <ion-header>
+    <ion-toolbar class="header">
+      <h2 class="title">
+        <span class="word">{{ current.word }}</span>
         <button
-          mat-menu-item
           type="button"
-          [attr.aria-current]="status === current.status ? 'true' : null"
-          (click)="setStatus(current, status)"
+          class="status"
+          [id]="statusMenuId"
+          aria-haspopup="true"
+          [attr.data-status]="current.status"
+          [disabled]="pending().includes(current.wordId)"
+          [attr.aria-label]="
+            'Status: ' + labels[current.status] + '. Change status'
+          "
         >
-          <mat-icon>{{ icons[status] }}</mat-icon>
-          <span>{{ labels[status] }}</span>
-          @if (status === current.status) {
-            <!-- Wrapped: menu items move top-level icons to the front. -->
-            <span class="selected"
-              ><mat-icon aria-hidden="true">check</mat-icon></span
-            >
-          }
+          <ion-icon [name]="icons[current.status]" aria-hidden="true" />
+          {{ labels[current.status] }}
+          <ion-icon class="caret" name="caret-down" aria-hidden="true" />
         </button>
-      }
-    </mat-menu>
-    <button
-      mat-icon-button
-      type="button"
-      class="close"
-      mat-dialog-close
-      aria-label="Close"
-    >
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
+      </h2>
+      <ion-buttons slot="end">
+        <ion-button class="close" aria-label="Close" (click)="close()">
+          <ion-icon slot="icon-only" name="close" />
+        </ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-header>
 
-  <mat-dialog-content>
+  <ion-popover
+    [trigger]="statusMenuId"
+    [dismissOnSelect]="true"
+    [keepContentsMounted]="true"
+  >
+    <ng-template>
+      <ion-list class="status-menu" lines="none">
+        @for (status of statuses; track status) {
+          <!-- From the first set-aside status down: words not worth
+               learning. -->
+          <ion-item
+            button
+            [detail]="false"
+            [class.set-aside]="status === setAside[0]"
+            [attr.aria-current]="status === current.status ? 'true' : null"
+            (click)="setStatus(current, status)"
+          >
+            <ion-icon slot="start" [name]="icons[status]" aria-hidden="true" />
+            <ion-label>{{ labels[status] }}</ion-label>
+            @if (status === current.status) {
+              <ion-icon
+                slot="end"
+                class="selected"
+                name="checkmark"
+                aria-hidden="true"
+              />
+            }
+          </ion-item>
+        }
+      </ion-list>
+    </ng-template>
+  </ion-popover>
+
+  <ion-content class="ion-padding">
     @if (nameHint(); as kinds) {
       <p class="name-hint">
-        <mat-icon inline>badge</mat-icon>
+        <ion-icon name="person-circle-outline" aria-hidden="true" />
         Probably a name ({{ kinds }})
       </p>
     }
@@ -62,16 +71,16 @@
       <h3 id="definition-heading" class="visually-hidden">Definition</h3>
       @if (definitionLoading()) {
         <div class="loading" role="status">
-          <mat-progress-spinner mode="indeterminate" diameter="24" />
+          <ion-spinner name="crescent" />
           Looking up “{{ current.word }}”…
         </div>
       } @else if (definitionError(); as message) {
         <div class="error" role="alert">
-          <mat-icon>error</mat-icon>
+          <ion-icon name="alert-circle-outline" aria-hidden="true" />
           <span>{{ message }}</span>
-          <button mat-button (click)="retryDefinition(current.word)">
+          <ion-button fill="clear" (click)="retryDefinition(current.word)">
             Retry
-          </button>
+          </ion-button>
         </div>
       } @else if (definition(); as article) {
         @for (meaning of article.meanings; track $index) {
@@ -111,16 +120,16 @@
       <h3 id="usage-heading">In your books</h3>
       @if (detailsLoading()) {
         <div class="loading" role="status">
-          <mat-progress-spinner mode="indeterminate" diameter="24" />
+          <ion-spinner name="crescent" />
           Loading…
         </div>
       } @else if (detailsError(); as message) {
         <div class="error" role="alert">
-          <mat-icon>error</mat-icon>
+          <ion-icon name="alert-circle-outline" aria-hidden="true" />
           <span>{{ message }}</span>
-          <button mat-button (click)="retryDetails(current.wordId)">
+          <ion-button fill="clear" (click)="retryDetails(current.wordId)">
             Retry
-          </button>
+          </ion-button>
         </div>
       } @else if (details(); as stats) {
         <p class="total">
@@ -131,41 +140,43 @@
         <ul>
           @for (book of stats.books; track book.bookId) {
             <li>
-              <a
-                [routerLink]="['/book', book.bookId]"
-                (click)="dialogRef.close()"
-                >{{ book.name }}</a
-              >
+              <a [routerLink]="['/book', book.bookId]" (click)="close()">{{
+                book.name
+              }}</a>
               <span>{{ book.count | number }}</span>
             </li>
           }
         </ul>
       }
     </section>
-  </mat-dialog-content>
+  </ion-content>
 
-  <mat-dialog-actions align="end">
-    @if (current.status === learning) {
-      <button
-        mat-flat-button
-        type="button"
-        class="know"
-        [disabled]="pending().includes(current.wordId)"
-        (click)="markKnownAndNext(current)"
-      >
-        <mat-icon>task_alt</mat-icon>
-        I know!
-      </button>
-    }
-    <button
-      mat-flat-button
-      type="button"
-      class="next"
-      [disabled]="!nextWord()"
-      (click)="next()"
-    >
-      Next
-      <mat-icon iconPositionEnd>arrow_forward</mat-icon>
-    </button>
-  </mat-dialog-actions>
+  <ion-footer>
+    <ion-toolbar class="footer">
+      <ion-buttons slot="end">
+        @if (current.status === learning) {
+          <ion-button
+            fill="solid"
+            color="tertiary"
+            class="know"
+            [disabled]="pending().includes(current.wordId)"
+            (click)="markKnownAndNext(current)"
+          >
+            <ion-icon slot="start" name="checkmark-circle-outline" />
+            I know!
+          </ion-button>
+        }
+        <ion-button
+          fill="solid"
+          color="primary"
+          class="next"
+          [disabled]="!nextWord()"
+          (click)="next()"
+        >
+          Next
+          <ion-icon slot="end" name="arrow-forward" />
+        </ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-footer>
 }

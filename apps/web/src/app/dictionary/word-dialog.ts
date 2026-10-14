@@ -1,25 +1,29 @@
 import { DecimalPipe } from '@angular/common';
 import {
   Component,
-  ElementRef,
+  InjectionToken,
+  Injector,
   computed,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogContent,
-  MatDialogModule,
-  MatDialogRef,
-} from '@angular/material/dialog';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterLink } from '@angular/router';
+import {
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonFooter,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonPopover,
+  IonSpinner,
+  IonToolbar,
+  ModalController,
+} from '@ionic/angular';
 import { WordStatus } from '@fictulary/shared/models';
 import { select } from '@ngxs/store';
 import { WordRef } from './dictionary.actions';
@@ -33,6 +37,19 @@ import {
   WORD_STATUS_LABELS,
 } from './word-status';
 
+export interface WordDialogData {
+  /** The word opened first. */
+  word: WordRef;
+  /** The list it was opened from, read live, for "Next". */
+  list: () => readonly WordRef[];
+}
+
+export const WORD_DIALOG_DATA = new InjectionToken<WordDialogData>(
+  'WORD_DIALOG_DATA',
+);
+
+let nextMenuId = 0;
+
 /**
  * Details for the word opened with DictionaryService.openWord: its
  * dictionary article, usage per book and status actions.
@@ -42,21 +59,30 @@ import {
   imports: [
     DecimalPipe,
     RouterLink,
-    MatButtonModule,
-    MatDialogModule,
-    MatDividerModule,
-    MatIconModule,
-    MatMenuModule,
-    MatProgressSpinnerModule,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonFooter,
+    IonHeader,
+    IonIcon,
+    IonItem,
+    IonLabel,
+    IonList,
+    IonPopover,
+    IonSpinner,
+    IonToolbar,
   ],
   templateUrl: './word-dialog.html',
   styleUrl: './word-dialog.scss',
 })
 export class WordDialog {
   private readonly dictionary = inject(DictionaryService);
-  private readonly data: WordDialogData = inject(MAT_DIALOG_DATA);
-  protected readonly dialogRef = inject(MatDialogRef<WordDialog>);
-  private readonly content = viewChild(MatDialogContent, { read: ElementRef });
+  private readonly data = inject(WORD_DIALOG_DATA);
+  private readonly modal = inject(ModalController);
+  private readonly content = viewChild(IonContent);
+
+  /** Opens the status menu; ids must be unique in the document. */
+  protected readonly statusMenuId = `word-status-menu-${nextMenuId++}`;
 
   protected readonly word = select(DictionaryState.currentWord);
   protected readonly details = select(DictionaryState.wordDetails);
@@ -123,8 +149,12 @@ export class WordDialog {
     if (hasNext) {
       this.next();
     } else {
-      this.dialogRef.close();
+      this.close();
     }
+  }
+
+  protected close(): void {
+    this.modal.dismiss();
   }
 
   protected next(): void {
@@ -135,10 +165,7 @@ export class WordDialog {
     this.position.set(this.indexOf(word));
     this.dictionary.openWord(word);
     // Start the new word's article from the top.
-    const content = this.content()?.nativeElement;
-    if (content) {
-      content.scrollTop = 0;
-    }
+    this.content()?.scrollToTop();
   }
 
   protected retryDetails(wordId: string): void {
@@ -154,13 +181,6 @@ export class WordDialog {
   }
 }
 
-export interface WordDialogData {
-  /** The word opened first. */
-  word: WordRef;
-  /** The list it was opened from, read live, for "Next". */
-  list: () => readonly WordRef[];
-}
-
 /**
  * Returns a function that opens the word dialog for a word of `list`,
  * loading its details, and clears them when the dialog closes. "Next" walks
@@ -170,19 +190,24 @@ export interface WordDialogData {
 export function injectWordDialog(
   list: () => readonly WordRef[],
 ): (word: WordRef) => void {
-  const dialog = inject(MatDialog);
+  const modals = inject(ModalController);
   const dictionary = inject(DictionaryService);
+  const injector = inject(Injector);
   return (word) => {
     dictionary.openWord(word);
     const data: WordDialogData = { word, list };
-    dialog
-      .open(WordDialog, {
-        data,
-        width: '640px',
-        maxWidth: 'calc(100vw - 32px)',
-        autoFocus: 'dialog',
+    void modals
+      .create({
+        component: WordDialog,
+        cssClass: 'word-dialog',
+        injector: Injector.create({
+          providers: [{ provide: WORD_DIALOG_DATA, useValue: data }],
+          parent: injector,
+        }),
       })
-      .afterClosed()
-      .subscribe(() => dictionary.closeWord());
+      .then((modal) => {
+        modal.onDidDismiss().then(() => dictionary.closeWord());
+        return modal.present();
+      });
   };
 }

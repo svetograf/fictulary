@@ -2,68 +2,77 @@
   <div class="page-content">
     @if (!signedIn()) {
       <div class="empty guest">
-        <mat-icon>auto_stories</mat-icon>
+        <ion-icon name="book-outline" aria-hidden="true" />
         <h2>Count the words in any book</h2>
         <p>Sign in to see your books, or create an account to upload one.</p>
         <div class="guest-actions">
-          <a mat-flat-button routerLink="/sign-in">Sign in</a>
-          <a mat-stroked-button routerLink="/sign-up">Sign up</a>
+          <ion-button routerLink="/sign-in">Sign in</ion-button>
+          <ion-button fill="outline" routerLink="/sign-up">Sign up</ion-button>
         </div>
       </div>
     } @else {
       <header class="page-header">
         <h2>Books</h2>
-        <a mat-flat-button routerLink="/upload">
-          <mat-icon>upload_file</mat-icon>
+        <ion-button routerLink="/upload">
+          <ion-icon slot="start" name="cloud-upload-outline" />
           Upload a book
-        </a>
+        </ion-button>
       </header>
 
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <ion-progress-bar type="indeterminate" />
       }
 
       @if (error(); as message) {
         <div class="error" role="alert">
-          <mat-icon>error</mat-icon>
+          <ion-icon name="alert-circle-outline" aria-hidden="true" />
           <span>{{ message }}</span>
-          <button mat-button (click)="booksService.loadBooks()">Retry</button>
+          <ion-button fill="clear" (click)="booksService.loadBooks()"
+            >Retry</ion-button
+          >
         </div>
       }
 
       @if (books().length) {
-        <ul class="books">
+        <ion-list class="books" lines="none">
           @for (book of books(); track book.id) {
-            <li>
-              <a class="book" [routerLink]="['/book', book.id]">
-                <mat-icon>menu_book</mat-icon>
-                <span class="text">
-                  <span class="title">{{ book.name }}</span>
-                  <span class="details">
+            <div class="row">
+              <ion-item
+                class="book"
+                [routerLink]="['/book', book.id]"
+                [detail]="false"
+              >
+                <ion-icon slot="start" name="book-outline" aria-hidden="true" />
+                <ion-label>
+                  <h3 class="title">{{ book.name }}</h3>
+                  <p class="details">
                     {{ book.wordCount | number }} words ·
                     {{ book.uniqueWordCount | number }} distinct · Added
                     {{ book.createdAt | date: 'mediumDate' }}
-                  </span>
-                </span>
-              </a>
-              <button
-                mat-icon-button
-                type="button"
-                matTooltip="Delete book"
+                  </p>
+                </ion-label>
+              </ion-item>
+              <ion-button
+                fill="clear"
+                shape="round"
+                class="delete"
+                title="Delete book"
                 [attr.aria-label]="'Delete ' + book.name"
                 [disabled]="deleting().includes(book.id)"
                 (click)="deleteBook(book)"
               >
-                <mat-icon>delete</mat-icon>
-              </button>
-            </li>
+                <ion-icon slot="icon-only" name="trash-outline" />
+              </ion-button>
+            </div>
           }
-        </ul>
+        </ion-list>
       } @else if (!loading() && !error()) {
         <div class="empty">
-          <mat-icon>library_books</mat-icon>
+          <ion-icon name="library-outline" aria-hidden="true" />
           <p>No books yet. Upload a .txt file to count its words.</p>
-          <a mat-stroked-button routerLink="/upload">Upload a book</a>
+          <ion-button fill="outline" routerLink="/upload"
+            >Upload a book</ion-button
+          >
         </div>
       }
     }

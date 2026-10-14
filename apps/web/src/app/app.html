@@ -1,73 +1,83 @@
 <ion-app>
   <ion-header>
-    <mat-toolbar>
-      <mat-icon>auto_stories</mat-icon>
-      <h1>{{ title }}</h1>
-      <nav>
-        <a
-          mat-button
-          routerLink="/"
-          routerDirection="root"
-          routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          >Books</a
-        >
-        @if (signedIn()) {
-          <a
-            mat-button
-            routerLink="/my-dictionary"
+    <ion-toolbar>
+      <div class="bar">
+        <ion-icon name="book-outline" aria-hidden="true" />
+        <h1>{{ title }}</h1>
+        <nav>
+          <ion-button
+            fill="clear"
+            routerLink="/"
             routerDirection="root"
             routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            >Books</ion-button
           >
-            <mat-icon>translate</mat-icon>
-            Dictionary
-          </a>
-          <a
-            mat-button
-            routerLink="/upload"
-            routerDirection="root"
-            routerLinkActive="active"
-          >
-            <mat-icon>upload_file</mat-icon>
-            Upload
-          </a>
-          <button
-            mat-button
-            class="account"
-            [matMenuTriggerFor]="accountMenu"
-            aria-label="Account"
-          >
-            <mat-icon>account_circle</mat-icon>
-            <span class="account-name">{{ user()?.name ?? 'Account' }}</span>
-          </button>
-          <mat-menu #accountMenu="matMenu" xPosition="before">
-            @if (user(); as current) {
-              <div class="account-details">
-                <strong>{{ current.name }}</strong>
-                <span>{{ current.email }}</span>
-              </div>
-              <mat-divider />
-            }
-            <button mat-menu-item (click)="signOut()">
-              <mat-icon>logout</mat-icon>
-              Sign out
-            </button>
-          </mat-menu>
-        } @else {
-          <a
-            mat-button
-            routerLink="/sign-in"
-            routerDirection="root"
-            routerLinkActive="active"
-            >Sign in</a
-          >
-          <a mat-flat-button routerLink="/sign-up" routerDirection="root"
-            >Sign up</a
-          >
-        }
-      </nav>
-    </mat-toolbar>
+          @if (signedIn()) {
+            <ion-button
+              fill="clear"
+              routerLink="/my-dictionary"
+              routerDirection="root"
+              routerLinkActive="active"
+            >
+              <ion-icon slot="start" name="language-outline" />
+              Dictionary
+            </ion-button>
+            <ion-button
+              fill="clear"
+              routerLink="/upload"
+              routerDirection="root"
+              routerLinkActive="active"
+            >
+              <ion-icon slot="start" name="cloud-upload-outline" />
+              Upload
+            </ion-button>
+            <ion-button fill="clear" id="account-menu" aria-label="Account">
+              <ion-icon slot="start" name="person-circle-outline" />
+              <span class="account-name">{{ user()?.name ?? 'Account' }}</span>
+            </ion-button>
+          } @else {
+            <ion-button
+              fill="clear"
+              routerLink="/sign-in"
+              routerDirection="root"
+              routerLinkActive="active"
+              >Sign in</ion-button
+            >
+            <ion-button
+              class="sign-up"
+              routerLink="/sign-up"
+              routerDirection="root"
+              >Sign up</ion-button
+            >
+          }
+        </nav>
+      </div>
+    </ion-toolbar>
   </ion-header>
 
   <ion-router-outlet />
+
+  @if (signedIn()) {
+    <ion-popover
+      trigger="account-menu"
+      alignment="end"
+      [dismissOnSelect]="true"
+    >
+      <ng-template>
+        <ion-list lines="none">
+          @if (user(); as current) {
+            <div class="account-details">
+              <strong>{{ current.name }}</strong>
+              <span>{{ current.email }}</span>
+            </div>
+          }
+          <ion-item button [detail]="false" (click)="signOut()">
+            <ion-icon slot="start" name="log-out-outline" aria-hidden="true" />
+            <ion-label>Sign out</ion-label>
+          </ion-item>
+        </ion-list>
+      </ng-template>
+    </ion-popover>
+  }
 </ion-app>

@@ -7,14 +7,14 @@ import {
   numberAttribute,
   untracked,
 } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import {
+  IonButton,
   IonContent,
-  IonRouterLinkWithHref,
+  IonIcon,
+  IonRouterLink,
+  IonSpinner,
   NavController,
   ViewWillEnter,
 } from '@ionic/angular';
@@ -23,20 +23,20 @@ import { filter } from 'rxjs';
 import { DeleteBookSuccess } from './books.actions';
 import { injectDeleteBook } from './delete-book';
 import { BOOK_WORD_PAGE_SIZES, BookDetailsCard } from './book-details-card';
-import { PageEvent } from '@angular/material/paginator';
 import { BOOK_TOP_WORDS_LIMIT } from '@fictulary/shared/models';
+import { PageChange } from '../shared/paginator';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 
 @Component({
   selector: 'app-book-page',
   imports: [
+    IonButton,
     IonContent,
-    IonRouterLinkWithHref,
+    IonIcon,
+    IonRouterLink,
+    IonSpinner,
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
     BookDetailsCard,
   ],
   templateUrl: './book-page.html',
@@ -125,9 +125,9 @@ export class BookPage implements ViewWillEnter {
     this.visited = true;
   }
 
-  protected changePage(event: PageEvent): void {
+  protected changePage({ page, pageSize }: PageChange): void {
     this.router.navigate([], {
-      queryParams: { page: event.pageIndex + 1, pageSize: event.pageSize },
+      queryParams: { page, pageSize },
       queryParamsHandling: 'merge',
     });
   }

@@ -1,16 +1,6 @@
-import {
-  Component,
-  Injector,
-  afterNextRender,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatStepper, MatStepperModule } from '@angular/material/stepper';
+import { Component, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IonContent } from '@ionic/angular';
+import { IonButton, IonContent, IonIcon, IonRouterLink } from '@ionic/angular';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofActionDispatched, select } from '@ngxs/store';
 import { UploadFileSuccess } from './books.actions';
@@ -32,11 +22,11 @@ enum Step {
 @Component({
   selector: 'app-upload-page',
   imports: [
+    IonButton,
     IonContent,
+    IonIcon,
+    IonRouterLink,
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatStepperModule,
     NamesReview,
     UploadForm,
   ],
@@ -47,13 +37,12 @@ enum Step {
 })
 export class UploadPage {
   private readonly books = inject(BooksService);
-  private readonly injector = inject(Injector);
   private readonly content = viewChild.required(IonContent);
-  private readonly stepper = viewChild.required(MatStepper);
 
+  protected readonly Step = Step;
+  protected readonly stepLabels = ['Upload', 'Review names', 'Book'];
+  protected readonly step = signal(Step.Upload);
   protected readonly uploaded = select(BooksState.uploadedBook);
-  /** Names were reviewed; the last step can be shown. */
-  protected readonly reviewed = signal(false);
 
   constructor() {
     // Each visit starts a new upload.
@@ -71,22 +60,17 @@ export class UploadPage {
   }
 
   protected showBook(): void {
-    this.reviewed.set(true);
     this.goTo(Step.Book);
   }
 
-  /**
-   * Moves after the next render: the linear stepper only allows a step once
-   * the previous one shows as completed, which bindings update on render.
-   */
-  private goTo(step: Step): void {
-    afterNextRender(
-      () => {
-        this.stepper().selectedIndex = step;
-        // The previous step may have been scrolled (e.g. a long form).
-        this.content().scrollToTop();
-      },
-      { injector: this.injector },
-    );
+  /** The upload can't be redone; the names can be reviewed again. */
+  protected canGoBackTo(step: Step): boolean {
+    return step === Step.ReviewNames && this.step() === Step.Book;
+  }
+
+  protected goTo(step: Step): void {
+    this.step.set(step);
+    // The previous step may have been scrolled (e.g. a long form).
+    this.content().scrollToTop();
   }
 }

@@ -1,15 +1,17 @@
 import { Component, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import {
   IonApp,
+  IonButton,
   IonHeader,
-  IonRouterLinkWithHref,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonPopover,
+  IonRouterLink,
   IonRouterOutlet,
+  IonToolbar,
   NavController,
 } from '@ionic/angular';
 import { select } from '@ngxs/store';
@@ -21,14 +23,16 @@ import { AuthState } from './auth/auth.state';
     RouterLink,
     RouterLinkActive,
     IonApp,
+    IonButton,
     IonHeader,
+    IonIcon,
+    IonItem,
+    IonLabel,
+    IonList,
+    IonPopover,
+    IonRouterLink,
     IonRouterOutlet,
-    IonRouterLinkWithHref,
-    MatToolbarModule,
-    MatButtonModule,
-    MatDividerModule,
-    MatIconModule,
-    MatMenuModule,
+    IonToolbar,
   ],
   selector: 'app-root',
   templateUrl: './app.html',

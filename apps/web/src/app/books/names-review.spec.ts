@@ -1,12 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { ModalController, ToastController } from '@ionic/angular';
 import { UploadedBook, WordCount, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
-import { of } from 'rxjs';
 import { ChangeWordStatusSuccess } from '../dictionary/dictionary.actions';
 import { DictionaryService } from '../dictionary/dictionary.service';
 import { DictionaryState } from '../dictionary/dictionary.state';
+import { ariaLabel, text } from '../shared/ionic-testing';
 import {
   LoadBookNamesFail,
   LoadBookNamesSuccess,
@@ -42,7 +41,12 @@ describe('NamesReview', () => {
     openWord: vi.fn(),
     closeWord: vi.fn(),
   };
-  const dialog = { open: vi.fn(() => ({ afterClosed: () => of(undefined) })) };
+  const modals = {
+    create: vi.fn(async () => ({
+      present: async () => undefined,
+      onDidDismiss: () => new Promise(() => undefined),
+    })),
+  };
   let store: Store;
 
   const render = async () => {
@@ -61,8 +65,8 @@ describe('NamesReview', () => {
         provideStore([BooksState, DictionaryState]),
         { provide: BooksService, useValue: books },
         { provide: DictionaryService, useValue: dictionary },
-        { provide: MatDialog, useValue: dialog },
-        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        { provide: ModalController, useValue: modals },
+        { provide: ToastController, useValue: { create: vi.fn() } },
       ],
     });
     store = TestBed.inject(Store);
@@ -81,23 +85,24 @@ describe('NamesReview', () => {
     expect(
       rows(element).map((row) => [
         row.querySelector('.word')?.textContent?.trim(),
-        row.querySelector('.status')?.textContent?.replace(/\s+/g, ' ').trim(),
-        row.querySelector('.usage')?.textContent?.replace(/\s+/g, ' ').trim(),
+        text(row.querySelector('.status')),
+        text(row.querySelector('.usage')),
       ]),
     ).toEqual([
-      ['tom', 'badge Name', '40 uses'],
-      ['becky', 'badge Name', '1 use'],
+      ['tom', 'Name', '40 uses'],
+      ['becky', 'Name', '1 use'],
     ]);
   });
 
   it('offers one "Restore" per name, making it Unknown', async () => {
     const element: HTMLElement = (await render()).nativeElement;
     const buttons = rows(element).map((row) => [
-      ...row.querySelectorAll<HTMLButtonElement>('.actions button'),
+      ...row.querySelectorAll<HTMLElement>('.actions ion-button'),
     ]);
-    expect(
-      buttons.map((b) => b.map((x) => x.getAttribute('aria-label'))),
-    ).toEqual([['Restore: tom'], ['Restore: becky']]);
+    expect(buttons.map((b) => b.map((x) => ariaLabel(x)))).toEqual([
+      ['Restore: tom'],
+      ['Restore: becky'],
+    ]);
 
     buttons[0][0].click();
     expect(dictionary.changeStatus).toHaveBeenCalledWith(
@@ -122,11 +127,9 @@ describe('NamesReview', () => {
     const row = rows(fixture.nativeElement)[0];
     expect(row.querySelector('.status')?.textContent).toContain('Unknown');
     const buttons = [
-      ...row.querySelectorAll<HTMLButtonElement>('.actions button'),
+      ...row.querySelectorAll<HTMLElement>('.actions ion-button'),
     ];
-    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
-      'Name: tom',
-    ]);
+    expect(buttons.map((b) => ariaLabel(b))).toEqual(['Name: tom']);
 
     buttons[0].click();
     expect(dictionary.changeStatus).toHaveBeenCalledWith('1', WordStatus.NAME);
@@ -136,7 +139,7 @@ describe('NamesReview', () => {
     const element: HTMLElement = (await render()).nativeElement;
     rows(element)[1].querySelector<HTMLButtonElement>('.word')?.click();
     expect(dictionary.openWord).toHaveBeenCalledWith(names[1]);
-    expect(dialog.open).toHaveBeenCalled();
+    expect(modals.create).toHaveBeenCalled();
   });
 
   it('emits "continue" from the button in the corner', async () => {
@@ -144,7 +147,7 @@ describe('NamesReview', () => {
     const spy = vi.fn();
     fixture.componentInstance.continue.subscribe(spy);
     (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.review-header button.continue')
+      .querySelector<HTMLElement>('.review-header ion-button.continue')
       ?.click();
     expect(spy).toHaveBeenCalled();
   });
@@ -156,13 +159,13 @@ describe('NamesReview', () => {
       'No names were found in this book.',
     );
     // Continue is still there.
-    expect(element.querySelector('button.continue')).not.toBeNull();
+    expect(element.querySelector('ion-button.continue')).not.toBeNull();
   });
 
   it('retries a failed load', async () => {
     store.dispatch(new LoadBookNamesFail('Could not reach the server.'));
     const element: HTMLElement = (await render()).nativeElement;
-    element.querySelector<HTMLButtonElement>('[role=alert] button')?.click();
+    element.querySelector<HTMLElement>('[role=alert] ion-button')?.click();
     expect(books.loadBookNames).toHaveBeenCalledWith(9);
   });
 });

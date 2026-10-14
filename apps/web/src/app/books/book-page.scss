@@ -17,7 +17,12 @@ app-book-details-card {
 }
 
 .error {
-  color: var(--mat-sys-error);
+  color: var(--ion-color-danger);
+
+  ion-icon {
+    flex: none;
+    font-size: 24px;
+  }
 }
 
 .toolbar {
@@ -26,9 +31,8 @@ app-book-details-card {
   justify-content: space-between;
   align-self: stretch;
   gap: 16px;
-}
 
-.delete {
-  --mat-button-outlined-label-text-color: var(--mat-sys-error);
-  --mat-button-outlined-outline-color: var(--mat-sys-error);
+  ion-button {
+    margin: 0;
+  }
 }

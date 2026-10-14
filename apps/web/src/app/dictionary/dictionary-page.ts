@@ -7,23 +7,26 @@ import {
   input,
   untracked,
 } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatIconModule } from '@angular/material/icon';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { BreakpointObserver } from '@angular/cdk/layout';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
-import { IonContent, ViewWillEnter } from '@ionic/angular';
+import {
+  IonButton,
+  IonContent,
+  IonIcon,
+  IonLabel,
+  IonProgressBar,
+  IonRouterLink,
+  IonSegment,
+  IonSegmentButton,
+  SegmentValue,
+  ViewWillEnter,
+} from '@ionic/angular';
 import {
   DICTIONARY_DEFAULT_PAGE_SIZE,
   DictionaryWord,
   WordStatus,
 } from '@fictulary/shared/models';
 import { select } from '@ngxs/store';
+import { PageChange, Paginator } from '../shared/paginator';
 import { DictionaryQuery } from './dictionary.actions';
 import { DictionaryService } from './dictionary.service';
 import { DictionaryState } from './dictionary.state';
@@ -38,9 +41,6 @@ import {
 } from './word-status';
 
 export const PAGE_SIZES = [25, 50, 100];
-
-/** Keep in sync with the media query in dictionary-page.scss. */
-const COMPACT_FILTER_QUERY = '(max-width: 640px)';
 
 /** Row button labels: what the user says about the word. */
 const MOVE_LABELS: Record<WordStatus, string> = {
@@ -68,15 +68,17 @@ const EMPTY_MESSAGES: Record<WordStatus, string> = {
 @Component({
   selector: 'app-dictionary-page',
   imports: [
+    IonButton,
     IonContent,
+    IonIcon,
+    IonLabel,
+    IonProgressBar,
+    IonRouterLink,
+    IonSegment,
+    IonSegmentButton,
     DecimalPipe,
     RouterLink,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatIconModule,
-    MatPaginatorModule,
-    MatProgressBarModule,
-    MatTooltipModule,
+    Paginator,
   ],
   templateUrl: './dictionary-page.html',
   styleUrl: './dictionary-page.scss',
@@ -88,14 +90,6 @@ export class DictionaryPage implements ViewWillEnter {
   private readonly router = inject(Router);
   /** "Next" in the dialog walks through the words on this page. */
   protected readonly open = injectWordDialog(() => this.items());
-
-  /** Narrow screens show the status filter as icons only. */
-  protected readonly compact = toSignal(
-    inject(BreakpointObserver)
-      .observe(COMPACT_FILTER_QUERY)
-      .pipe(map((state) => state.matches)),
-    { initialValue: false },
-  );
 
   // Bound from the query string, so filters survive reloads and back/forward.
   readonly status = input<string>();
@@ -153,12 +147,13 @@ export class DictionaryPage implements ViewWillEnter {
     this.visited = true;
   }
 
-  protected setStatus(status: WordStatus): void {
-    this.navigate({ status, page: null });
+  /** A status picked in the filter; `query` checks it is one. */
+  protected setStatus(status: SegmentValue | undefined): void {
+    this.navigate({ status: status ?? null, page: null });
   }
 
-  protected changePage(event: PageEvent): void {
-    this.navigate({ page: event.pageIndex + 1, pageSize: event.pageSize });
+  protected changePage({ page, pageSize }: PageChange): void {
+    this.navigate({ page, pageSize });
   }
 
   protected retry(): void {

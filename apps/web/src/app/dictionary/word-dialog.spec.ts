@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { ModalController } from '@ionic/angular';
 import { provideRouter } from '@angular/router';
 import { NameKind, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
@@ -13,7 +13,8 @@ import {
 } from './dictionary.actions';
 import { DictionaryService } from './dictionary.service';
 import { DictionaryState } from './dictionary.state';
-import { WordDialog, WordDialogData } from './word-dialog';
+import { ariaLabel, text } from '../shared/ionic-testing';
+import { WORD_DIALOG_DATA, WordDialog, WordDialogData } from './word-dialog';
 import { phone, phoneDefinition, phoneDetails, word } from './testing';
 
 describe('WordDialog', () => {
@@ -36,7 +37,7 @@ describe('WordDialog', () => {
     // OpenWord would call the API; just switch the open word.
     openWord: vi.fn((next: WordRef) => setOpenWord(next)),
   };
-  const dialogRef = { close: vi.fn() };
+  const modal = { dismiss: vi.fn() };
 
   const render = async () => {
     const fixture = TestBed.createComponent(WordDialog);
@@ -52,9 +53,9 @@ describe('WordDialog', () => {
         // The real state, without HTTP: responses are dispatched directly.
         provideStore([DictionaryState]),
         { provide: DictionaryService, useValue: dictionary },
-        { provide: MatDialogRef, useValue: dialogRef },
+        { provide: ModalController, useValue: modal },
         {
-          provide: MAT_DIALOG_DATA,
+          provide: WORD_DIALOG_DATA,
           useValue: { word: phone, list } satisfies WordDialogData,
         },
       ],
@@ -125,19 +126,18 @@ describe('WordDialog', () => {
         new LoadWordDetailsSuccess({ ...phoneDetails, status, nameKinds }),
       );
       await fixture.whenStable();
-      return (fixture.nativeElement as HTMLElement)
-        .querySelector('.name-hint')
-        ?.textContent?.replace(/\s+/g, ' ')
-        .trim();
+      return text(
+        (fixture.nativeElement as HTMLElement).querySelector('.name-hint'),
+      );
     };
 
     it('says what the word probably names', async () => {
-      expect(await hint([NameKind.CITY])).toBe('badge Probably a name (city)');
+      expect(await hint([NameKind.CITY])).toBe('Probably a name (city)');
     });
 
     it('lists every kind it was found as', async () => {
       expect(await hint([NameKind.PERSON, NameKind.CITY])).toBe(
-        'badge Probably a name (person, city)',
+        'Probably a name (person, city)',
       );
     });
 
@@ -147,7 +147,7 @@ describe('WordDialog', () => {
 
     it('is shown for Name words too, e.g. when browsing the Name list', async () => {
       expect(await hint([NameKind.PERSON], WordStatus.NAME)).toBe(
-        'badge Probably a name (person)',
+        'Probably a name (person)',
       );
     });
   });
@@ -155,42 +155,41 @@ describe('WordDialog', () => {
   it('reflects the status change from viewing an unknown word', async () => {
     const fixture = await render();
     const status = () =>
-      (fixture.nativeElement as HTMLElement)
-        .querySelector('.status')
-        ?.textContent?.trim();
-    expect(status()).toBe('help_outline Unknown arrow_drop_down');
+      text((fixture.nativeElement as HTMLElement).querySelector('.status'));
+    expect(status()).toBe('Unknown');
 
     store.dispatch(
       new MarkWordViewedSuccess({ ...phone, status: WordStatus.LEARNING }),
     );
     await fixture.whenStable();
-    expect(status()).toBe('school Learning arrow_drop_down');
+    expect(status()).toBe('Learning');
   });
 
   it('has only "Next" at the bottom', async () => {
     const fixture = await render();
     const buttons = [
       ...(fixture.nativeElement as HTMLElement).querySelectorAll(
-        'mat-dialog-actions button',
+        'ion-footer ion-button',
       ),
     ];
-    expect(
-      buttons.map((b) => b.textContent?.replace(/\s+/g, ' ').trim()),
-    ).toEqual(['Next arrow_forward']);
+    expect(buttons.map((b) => text(b))).toEqual(['Next']);
   });
 
   it('closes from the X button in the corner', async () => {
     const fixture = await render();
     const close = (
       fixture.nativeElement as HTMLElement
-    ).querySelector<HTMLButtonElement>('.header button[aria-label="Close"]');
+    ).querySelector<HTMLElement>('.header ion-button.close');
+    expect(ariaLabel(close)).toBe('Close');
     close?.click();
-    expect(dialogRef.close).toHaveBeenCalled();
+    expect(modal.dismiss).toHaveBeenCalled();
   });
 
   describe('"Next"', () => {
     const nextButton = (fixture: { nativeElement: HTMLElement }) =>
-      fixture.nativeElement.querySelector<HTMLButtonElement>('button.next');
+      fixture.nativeElement.querySelector<HTMLIonButtonElement>(
+        'ion-button.next',
+      );
     const title = (fixture: { nativeElement: HTMLElement }) =>
       fixture.nativeElement.querySelector('.title .word')?.textContent?.trim();
 
@@ -201,7 +200,7 @@ describe('WordDialog', () => {
 
       expect(dictionary.openWord).toHaveBeenLastCalledWith(word('1'));
       expect(title(fixture)).toBe('word1');
-      expect(dialogRef.close).not.toHaveBeenCalled();
+      expect(modal.dismiss).not.toHaveBeenCalled();
 
       nextButton(fixture)?.click();
       await fixture.whenStable();
@@ -234,25 +233,20 @@ describe('WordDialog', () => {
   describe('"I know!"', () => {
     const learningPhone = { ...phone, status: WordStatus.LEARNING };
     const buttons = (fixture: { nativeElement: HTMLElement }) =>
-      [
-        ...fixture.nativeElement.querySelectorAll<HTMLButtonElement>(
-          'mat-dialog-actions button',
-        ),
-      ].map((b) => b.textContent?.replace(/\s+/g, ' ').trim());
+      [...fixture.nativeElement.querySelectorAll('ion-footer ion-button')].map(
+        (b) => text(b),
+      );
     const knowButton = (fixture: { nativeElement: HTMLElement }) =>
-      fixture.nativeElement.querySelector<HTMLButtonElement>('button.know');
+      fixture.nativeElement.querySelector<HTMLIonButtonElement>(
+        'ion-button.know',
+      );
 
     it('appears left of "Next" for words being learned', async () => {
       list.set([learningPhone, word('1')]);
       setOpenWord(learningPhone);
       const fixture = await render();
-      expect(buttons(fixture)).toEqual([
-        'task_alt I know!',
-        'Next arrow_forward',
-      ]);
-      expect(knowButton(fixture)?.classList).toContain(
-        'mat-mdc-unelevated-button',
-      );
+      expect(buttons(fixture)).toEqual(['I know!', 'Next']);
+      expect(knowButton(fixture)?.fill).toBe('solid');
     });
 
     it.each([WordStatus.UNKNOWN, WordStatus.KNOWN])(
@@ -277,7 +271,7 @@ describe('WordDialog', () => {
         WordStatus.KNOWN,
       );
       expect(dictionary.openWord).toHaveBeenLastCalledWith(word('1'));
-      expect(dialogRef.close).not.toHaveBeenCalled();
+      expect(modal.dismiss).not.toHaveBeenCalled();
     });
 
     it('closes the dialog on the last word', async () => {
@@ -292,7 +286,7 @@ describe('WordDialog', () => {
         WordStatus.KNOWN,
       );
       expect(dictionary.openWord).not.toHaveBeenCalled();
-      expect(dialogRef.close).toHaveBeenCalled();
+      expect(modal.dismiss).toHaveBeenCalled();
     });
 
     it('is disabled while a change is in flight', async () => {
@@ -311,76 +305,87 @@ describe('WordDialog', () => {
       fixture.nativeElement.querySelector<HTMLButtonElement>(
         '.title button.status',
       );
-    const openMenu = async (fixture: Awaited<ReturnType<typeof render>>) => {
-      badge(fixture)?.click();
-      await fixture.whenStable();
-      // The menu renders in the overlay container, outside the dialog.
-      return [
-        ...document.querySelectorAll<HTMLButtonElement>('.mat-mdc-menu-item'),
-      ];
-    };
+    // The popover keeps its items in the page, ready to show.
+    const menuItems = (fixture: { nativeElement: HTMLElement }) => [
+      ...fixture.nativeElement.querySelectorAll<HTMLElement>(
+        'ion-popover .status-menu ion-item',
+      ),
+    ];
 
     it('shows the status as a button that opens a menu', async () => {
       const fixture = await render();
       expect(badge(fixture)?.getAttribute('aria-label')).toBe(
         'Status: Unknown. Change status',
       );
-      expect(badge(fixture)?.getAttribute('aria-haspopup')).toBe('menu');
+      expect(badge(fixture)?.getAttribute('aria-haspopup')).toBe('true');
+      const popover = (fixture.nativeElement as HTMLElement).querySelector(
+        'ion-popover',
+      ) as HTMLIonPopoverElement | null;
+      expect(popover?.trigger).toBe(badge(fixture)?.id);
     });
 
     it('lists every status, marking the current one', async () => {
       const fixture = await render();
-      const items = await openMenu(fixture);
       const describe = (item: HTMLElement) => ({
-        icon: item.querySelector(':scope > mat-icon')?.textContent?.trim(),
-        label: item
-          .querySelector('.mat-mdc-menu-item-text')
-          ?.textContent?.replace('check', '')
-          .trim(),
+        icon: item.querySelector<HTMLIonIconElement>('ion-icon[slot=start]')
+          ?.name,
+        label: text(item.querySelector('ion-label')),
         // The check sits after the label, not in the icon slot.
-        checked: !!item.querySelector(
-          '.mat-mdc-menu-item-text .selected mat-icon',
-        ),
+        checked: !!item.querySelector('ion-icon[slot=end].selected'),
         current: item.getAttribute('aria-current'),
       });
-      expect(items.map(describe)).toEqual([
-        { icon: 'task_alt', label: 'Known', checked: false, current: null },
-        { icon: 'school', label: 'Learning', checked: false, current: null },
+      expect(menuItems(fixture).map(describe)).toEqual([
         {
-          icon: 'help_outline',
+          icon: 'checkmark-circle-outline',
+          label: 'Known',
+          checked: false,
+          current: null,
+        },
+        {
+          icon: 'school-outline',
+          label: 'Learning',
+          checked: false,
+          current: null,
+        },
+        {
+          icon: 'help-circle-outline',
           label: 'Unknown',
           checked: true,
           current: 'true',
         },
-        { icon: 'badge', label: 'Name', checked: false, current: null },
-        { icon: 'delete', label: 'Trash', checked: false, current: null },
+        {
+          icon: 'person-circle-outline',
+          label: 'Name',
+          checked: false,
+          current: null,
+        },
+        {
+          icon: 'trash-outline',
+          label: 'Trash',
+          checked: false,
+          current: null,
+        },
       ]);
     });
 
     it('changes the status and keeps the dialog open', async () => {
       const fixture = await render();
-      const items = await openMenu(fixture);
-      items[0].click();
+      menuItems(fixture)[0].click();
 
       expect(dictionary.changeStatus).toHaveBeenCalledWith(
         '12',
         WordStatus.KNOWN,
       );
-      expect(dialogRef.close).not.toHaveBeenCalled();
+      expect(modal.dismiss).not.toHaveBeenCalled();
     });
 
     it('separates Name and Trash from the learning statuses', async () => {
       const fixture = await render();
-      await openMenu(fixture);
-      const panel = document.querySelector('.mat-mdc-menu-content');
-      const sequence = [...(panel?.children ?? [])].map((el) =>
-        el.tagName === 'MAT-DIVIDER'
-          ? '---'
-          : el
-              .querySelector('.mat-mdc-menu-item-text')
-              ?.textContent?.replace('check', '')
-              .trim(),
-      );
+      // A rule above the first set-aside status.
+      const sequence = menuItems(fixture).flatMap((item) => [
+        ...(item.classList.contains('set-aside') ? ['---'] : []),
+        text(item.querySelector('ion-label')),
+      ]);
       expect(sequence).toEqual([
         'Known',
         'Learning',
@@ -395,8 +400,7 @@ describe('WordDialog', () => {
       'puts the word in %s',
       async (status) => {
         const fixture = await render();
-        const items = await openMenu(fixture);
-        items
+        menuItems(fixture)
           .find((i) =>
             i.textContent?.includes(
               status === WordStatus.NAME ? 'Name' : 'Trash',
@@ -409,8 +413,7 @@ describe('WordDialog', () => {
 
     it('does nothing when the current status is picked again', async () => {
       const fixture = await render();
-      const items = await openMenu(fixture);
-      items[2].click();
+      menuItems(fixture)[2].click();
       expect(dictionary.changeStatus).not.toHaveBeenCalled();
     });
 
@@ -435,7 +438,7 @@ describe('WordDialog', () => {
       '[role=alert]',
     );
     expect(alert?.textContent).toContain('Could not reach the server');
-    (alert?.querySelector('button') as HTMLButtonElement).click();
+    alert?.querySelector<HTMLElement>('ion-button')?.click();
     expect(dictionary.retryDefinition).toHaveBeenCalledWith('phone');
   });
 });

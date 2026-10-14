@@ -24,8 +24,8 @@ import { DictionaryState } from './dictionary/dictionary.state';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    // Material Design mode, to sit next to the Angular Material components
-    // until they are replaced with Ionic ones.
+    // Material Design mode on every platform, so the app looks the same
+    // on phones and on the web.
     provideIonicAngular({ mode: 'md' }),
     provideRouter(appRoutes, withComponentInputBinding()),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),

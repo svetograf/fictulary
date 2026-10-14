@@ -24,12 +24,13 @@ export const WORD_STATUS_LABELS: Record<WordStatus, string> = {
   [WordStatus.TRASH]: 'Trash',
 };
 
+/** Ionicons names; registered in shared/icons.ts. */
 export const WORD_STATUS_ICONS: Record<WordStatus, string> = {
-  [WordStatus.KNOWN]: 'task_alt',
-  [WordStatus.LEARNING]: 'school',
-  [WordStatus.UNKNOWN]: 'help_outline',
-  [WordStatus.NAME]: 'badge',
-  [WordStatus.TRASH]: 'delete',
+  [WordStatus.KNOWN]: 'checkmark-circle-outline',
+  [WordStatus.LEARNING]: 'school-outline',
+  [WordStatus.UNKNOWN]: 'help-circle-outline',
+  [WordStatus.NAME]: 'person-circle-outline',
+  [WordStatus.TRASH]: 'trash-outline',
 };
 
 /**
