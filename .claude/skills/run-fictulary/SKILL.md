@@ -30,6 +30,7 @@ npx --prefix .claude/skills/run-fictulary playwright-core install chromium
 
 ```bash
 .claude/skills/run-fictulary/start.sh   # ~15s; prints "Ready: ..." when both answer
+NO_APPLE=1 .claude/skills/run-fictulary/start.sh   # same, with Apple sign-in off (button hidden)
 ```
 
 This starts the following and leaves them running in the background:
@@ -130,6 +131,16 @@ npx nx run-many -t lint test build -p api web shared-models
   `click-css`.
 - **`ion-input` hides its real `<input>`.** Filling the host does
   nothing; `fill` targets `ion-input[formcontrolname=X] input`.
+- **Your own `nx serve web` blocks a second one.** Nx makes another
+  `web:serve` wait ("Waiting for web:serve:development in another nx
+  process") instead of starting it. `start.sh` gives its Nx a separate
+  workspace data directory (`out/nx-data`) and `NX_DAEMON=false`, so it
+  runs alongside yours.
+- **The API also reads `apps/api/.env`** for anything not set in the
+  environment. `start.sh` sets every required value itself (including
+  `JWT_SECRET`). With `NO_APPLE=1` it sets the `APPLE_*` values to empty
+  strings, because unsetting them would let values from your `.env` fill
+  them in.
 - **Don't `pkill -f dist/apps/api/main.js`.** The pattern also matches
   the shell running it, which kills the agent's command (exit 144).
   `stop.sh` kills by port instead.
