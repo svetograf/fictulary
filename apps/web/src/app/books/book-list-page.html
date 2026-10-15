@@ -1,16 +1,8 @@
 <ion-content>
-  <div class="page-content">
-    @if (!signedIn()) {
-      <div class="empty guest">
-        <ion-icon name="book-outline" aria-hidden="true" />
-        <h2>Count the words in any book</h2>
-        <p>Sign in to see your books, or create an account to upload one.</p>
-        <div class="guest-actions">
-          <ion-button routerLink="/sign-in">Sign in</ion-button>
-          <ion-button fill="outline" routerLink="/sign-up">Sign up</ion-button>
-        </div>
-      </div>
-    } @else {
+  @if (!signedIn()) {
+    <app-landing />
+  } @else {
+    <div class="page-content">
       <header class="page-header">
         <h2>Books</h2>
         <ion-button routerLink="/upload">
@@ -75,6 +67,6 @@
           >
         </div>
       }
-    }
-  </div>
+    </div>
+  }
 </ion-content>

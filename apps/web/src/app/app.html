@@ -1,53 +1,57 @@
 <ion-app>
-  <ion-header>
-    <ion-toolbar>
-      <div class="bar">
-        <img class="logo" src="favicon.svg" alt="" width="32" height="32" />
-        <h1>{{ title }}</h1>
-        <nav>
-          <ion-button
-            fill="clear"
-            routerLink="/"
-            routerDirection="root"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: true }"
-            >Books</ion-button
-          >
-          @if (signedIn()) {
+  @if (showHeader()) {
+    <ion-header>
+      <ion-toolbar>
+        <div class="bar">
+          <img class="logo" src="favicon.svg" alt="" width="32" height="32" />
+          <h1>{{ title }}</h1>
+          <nav>
             <ion-button
               fill="clear"
-              routerLink="/my-dictionary"
+              routerLink="/"
               routerDirection="root"
               routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              >Books</ion-button
             >
-              <ion-icon slot="start" name="language-outline" />
-              Dictionary
-            </ion-button>
-            <ion-button
-              fill="clear"
-              routerLink="/upload"
-              routerDirection="root"
-              routerLinkActive="active"
-            >
-              <ion-icon slot="start" name="cloud-upload-outline" />
-              Upload
-            </ion-button>
-            <ion-button fill="clear" id="account-menu" aria-label="Account">
-              <ion-icon slot="start" name="person-circle-outline" />
-              <span class="account-name">{{ user()?.name || 'Account' }}</span>
-            </ion-button>
-          } @else {
-            <ion-button
-              class="sign-in"
-              routerLink="/sign-in"
-              routerDirection="root"
-              >Sign in</ion-button
-            >
-          }
-        </nav>
-      </div>
-    </ion-toolbar>
-  </ion-header>
+            @if (signedIn()) {
+              <ion-button
+                fill="clear"
+                routerLink="/my-dictionary"
+                routerDirection="root"
+                routerLinkActive="active"
+              >
+                <ion-icon slot="start" name="language-outline" />
+                Dictionary
+              </ion-button>
+              <ion-button
+                fill="clear"
+                routerLink="/upload"
+                routerDirection="root"
+                routerLinkActive="active"
+              >
+                <ion-icon slot="start" name="cloud-upload-outline" />
+                Upload
+              </ion-button>
+              <ion-button fill="clear" id="account-menu" aria-label="Account">
+                <ion-icon slot="start" name="person-circle-outline" />
+                <span class="account-name">{{
+                  user()?.name || 'Account'
+                }}</span>
+              </ion-button>
+            } @else {
+              <ion-button
+                class="sign-in"
+                routerLink="/sign-in"
+                routerDirection="root"
+                >Sign in</ion-button
+              >
+            }
+          </nav>
+        </div>
+      </ion-toolbar>
+    </ion-header>
+  }
 
   <ion-router-outlet />
 

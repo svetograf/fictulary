@@ -74,11 +74,12 @@ describe('BookListPage', () => {
     const fixture = await render({ signedIn: false });
     expect(booksService.loadBooks).not.toHaveBeenCalled();
     const element: HTMLElement = fixture.nativeElement;
-    expect(element.textContent).toContain('Sign in to see your books');
-    const signIn = [...element.querySelectorAll('ion-button')].find(
-      (button) => (button as { href?: string }).href === '/sign-in',
-    );
-    expect(signIn?.textContent?.trim()).toBe('Sign in');
+    expect(element.querySelector('app-landing')).not.toBeNull();
+    const [signIn, signUp] = element.querySelectorAll('app-landing ion-button');
+    expect(signIn.textContent?.trim()).toBe('Sign in');
+    expect((signIn as { href?: string }).href).toBe('/sign-in');
+    expect(signUp.textContent?.trim()).toBe('Sign up');
+    expect((signUp as { href?: string }).href).toBe('/sign-in?mode=sign-up');
     expect(element.querySelector('.books ion-item')).toBeNull();
   });
 
@@ -87,9 +88,7 @@ describe('BookListPage', () => {
     TestBed.inject(Store).dispatch(new LoadBooksSuccess([book]));
     TestBed.inject(Store).dispatch(new SignOut());
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain(
-      'Sign in to see your books',
-    );
+    expect(fixture.nativeElement.querySelector('app-landing')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.books ion-item')).toBeNull();
   });
 

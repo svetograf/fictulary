@@ -14,6 +14,7 @@ import {
 } from '@ionic/angular';
 import { select } from '@ngxs/store';
 import { AuthState } from '../auth/auth.state';
+import { Landing } from '../home/landing';
 import { BooksService } from './books.service';
 import { injectDeleteBook } from './delete-book';
 import { BooksState } from './books.state';
@@ -31,6 +32,7 @@ import { BooksState } from './books.state';
     IonRouterLink,
     DatePipe,
     DecimalPipe,
+    Landing,
     RouterLink,
   ],
   templateUrl: './book-list-page.html',

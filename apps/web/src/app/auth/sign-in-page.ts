@@ -59,6 +59,9 @@ export class SignInPage implements ViewWillEnter {
 
   /** Where to go after signing in; bound from the query string. */
   readonly returnUrl = input<string>();
+  /** `sign-up` from the landing page's Sign up; the same sign-in, retitled. */
+  readonly mode = input<string>();
+  protected readonly signingUp = computed(() => this.mode() === 'sign-up');
 
   protected readonly submitting = select(AuthState.submitting);
   protected readonly error = select(AuthState.error);

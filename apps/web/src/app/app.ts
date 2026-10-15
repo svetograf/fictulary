@@ -1,5 +1,11 @@
-import { Component, effect, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, computed, effect, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+} from '@angular/router';
 import {
   IonApp,
   IonButton,
@@ -15,6 +21,7 @@ import {
   NavController,
 } from '@ionic/angular';
 import { select } from '@ngxs/store';
+import { filter, map } from 'rxjs';
 import { AuthService } from './auth/auth.service';
 import { AuthState } from './auth/auth.state';
 import { AUTH_CALLBACK_PATH } from './auth/social-login.service';
@@ -51,6 +58,19 @@ export class App {
   protected readonly signedIn = select(AuthState.isAuthenticated);
   protected readonly user = select(AuthState.user);
   private readonly needsName = select(AuthState.needsName);
+
+  /** The current path, without the query string or fragment. */
+  private readonly path = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects.split(/[?#]/)[0]),
+    ),
+    { initialValue: this.router.url.split(/[?#]/)[0] },
+  );
+  /** Signed-out visitors get the landing page on its own, without a header. */
+  protected readonly showHeader = computed(
+    () => this.signedIn() || this.path() !== '/',
+  );
 
   constructor() {
     // A restored session whose user never picked a name (e.g. closed the

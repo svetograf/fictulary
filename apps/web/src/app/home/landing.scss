@@ -1,0 +1,77 @@
+// Centered in the page, scrolling only when the screen is too short.
+:host {
+  display: flex;
+  min-height: 100%;
+}
+
+.landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 640px;
+  margin: auto;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.logo {
+  display: block;
+  width: 300px;
+  max-width: 70vw;
+  height: auto;
+}
+
+// The logo's gradient, across the wordmark.
+.title {
+  margin: 0;
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--app-gradient);
+  background-clip: text;
+  color: transparent;
+}
+
+.pitch {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--ion-color-medium);
+  font-size: 18px;
+  line-height: 1.5;
+
+  p {
+    margin: 0;
+  }
+
+  .lead {
+    color: var(--ion-text-color);
+    font-size: 22px;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 8px;
+
+  ion-button {
+    min-width: 160px;
+    margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 48px;
+  }
+
+  .actions ion-button {
+    flex: 1;
+  }
+}

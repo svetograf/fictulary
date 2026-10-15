@@ -1,0 +1,28 @@
+<main class="landing">
+  <img class="logo" src="favicon.svg" alt="" width="300" height="300" />
+  <h1 class="title">Fictulary</h1>
+
+  <div class="pitch">
+    <p class="lead">
+      We all love to get lost in a good book. Why not get lost in a new language
+      too?
+    </p>
+    <p>
+      Bring the stories you already want to read. Fictulary counts every word in
+      them, shows you the ones you don't know yet, and helps you learn them
+      before you turn the first page.
+    </p>
+    <p>Read more. Learn as you go. One chapter at a time.</p>
+  </div>
+
+  <div class="actions">
+    <ion-button size="large" routerLink="/sign-in">Sign in</ion-button>
+    <ion-button
+      size="large"
+      fill="outline"
+      routerLink="/sign-in"
+      [queryParams]="{ mode: 'sign-up' }"
+      >Sign up</ion-button
+    >
+  </div>
+</main>

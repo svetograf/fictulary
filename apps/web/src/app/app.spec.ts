@@ -22,19 +22,25 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  const render = async () => {
+  const render = async (url = '/') => {
     const fixture = TestBed.createComponent(App);
+    await TestBed.inject(Router).navigateByUrl(url);
     await fixture.whenStable();
     return fixture.nativeElement as HTMLElement;
   };
 
   it('should render title', async () => {
+    TestBed.inject(Store).dispatch(new SignInSuccess(authResponse()));
     const element = await render();
     expect(element.querySelector('h1')?.textContent).toContain('Fictulary');
   });
 
-  it('offers sign in when signed out', async () => {
-    const text = (await render()).querySelector('nav')?.textContent;
+  it('leaves the signed-out home page to the landing page, without a header', async () => {
+    expect((await render('/')).querySelector('ion-header')).toBeNull();
+  });
+
+  it('offers sign in when signed out, away from the home page', async () => {
+    const text = (await render('/book/3')).querySelector('nav')?.textContent;
     expect(text).toContain('Sign in');
     expect(text).not.toContain('Upload');
   });
