@@ -33,7 +33,6 @@ describe('authInterceptor', () => {
       providers: [
         provideRouter([
           { path: '', component: Blank },
-          { path: 'sign-in', component: Blank },
           { path: 'upload', component: Blank, canActivate: [authGuard] },
         ]),
         provideStore([AuthState]),
@@ -89,7 +88,7 @@ describe('authInterceptor', () => {
       .flush(null, { status: 401, statusText: 'Unauthorized' });
   };
 
-  it('signs out and redirects to sign-in from a restricted page', async () => {
+  it('signs out and sends restricted pages home to sign in', async () => {
     signIn();
     await router.navigateByUrl('/upload');
 
@@ -97,7 +96,7 @@ describe('authInterceptor', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.selectSnapshot(AuthState.isAuthenticated)).toBe(false);
-    expect(router.url).toBe('/sign-in?returnUrl=%2Fupload');
+    expect(router.url).toBe('/?returnUrl=%2Fupload');
   });
 
   it('signs out but stays put on public pages', async () => {
@@ -119,6 +118,6 @@ describe('authInterceptor', () => {
     await navigation;
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(router.url).toBe('/sign-in?returnUrl=%2Fupload');
+    expect(router.url).toBe('/?returnUrl=%2Fupload');
   });
 });

@@ -48,10 +48,11 @@ Drive it by piping commands to the driver, one per line:
 node .claude/skills/run-fictulary/driver.mjs <<'EOF'
 nav /upload
 wait Continue with Apple
-shot 1-sign-in
+shot 1-sign-in-dialog
 fill email dev@example.com
 click Sign in as this user
 wait What should we call you?
+sleep 1000
 fill name Dev User
 click Continue
 wait-url /upload
@@ -118,10 +119,19 @@ npx nx run-many -t lint test build -p api web shared-models
 - **Real Google and Apple sign-in can't be completed here.** With the
   placeholder client ID, "Continue with Google" opens a Google popup
   that shows `invalid_client`; you can reach it with `last-page`. Apple
-  never accepts `localhost` return URLs. Use `signin` or the dev form on
-  `/sign-in`, which appears only while `AUTH_DEV_LOGIN=true`.
-- **`nav /sign-in` while signed in lands on `/`**, because the sign-in
-  page sends signed-in users home. Run `signout` first.
+  never accepts `localhost` return URLs. Use `signin` or the dev form in
+  the sign-in dialog, which appears only while `AUTH_DEV_LOGIN=true`.
+- **There is no sign-in page.** Signed out, "Sign in" and "Sign up" on
+  the landing page (`/`) open a dialog: centered at 768×600 and up, a
+  bottom sheet below that. A signed-out `nav` to a page behind the auth
+  guard lands on `/?returnUrl=…` with the dialog already open, and
+  returns there after signing in. Close it with
+  `click-css ion-modal ion-buttons ion-button`; Ionic moves `aria-label`
+  off `ion-button`, so `[aria-label=Close]` matches nothing.
+- **The sign-in dialog fades out over the next page.** For about a
+  second after signing in, its dev form's `name` field and the welcome
+  page's both exist, and `fill name` fails with "strict mode violation".
+  `sleep 1000` first.
 - **Ionic overlays fade in and out.** Screenshots taken immediately catch
   popovers and alerts half-transparent, which is why `shot` waits first.
   An alert's buttons sit inside `ion-alert`; click them with

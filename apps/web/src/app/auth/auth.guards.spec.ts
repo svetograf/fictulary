@@ -8,7 +8,7 @@ import {
 } from '@angular/router';
 import { Store, provideStore } from '@ngxs/store';
 import { SignInSuccess } from './auth.actions';
-import { authGuard, guestGuard, safeReturnUrl } from './auth.guards';
+import { authGuard, safeReturnUrl } from './auth.guards';
 import { AuthState } from './auth.state';
 import { authResponse } from './testing';
 
@@ -27,26 +27,16 @@ describe('auth guards', () => {
     });
   });
 
-  it('authGuard sends signed-out users to sign-in with a return URL', () => {
+  it('authGuard sends signed-out users home to sign in, with a return URL', () => {
     const result = run(authGuard) as UrlTree;
     expect(TestBed.inject(Router).serializeUrl(result)).toBe(
-      '/sign-in?returnUrl=%2Fbook%2F3',
+      '/?returnUrl=%2Fbook%2F3',
     );
   });
 
   it('authGuard lets signed-in users through', () => {
     signIn();
     expect(run(authGuard)).toBe(true);
-  });
-
-  it('guestGuard sends signed-in users home', () => {
-    signIn();
-    const result = run(guestGuard) as UrlTree;
-    expect(TestBed.inject(Router).serializeUrl(result)).toBe('/');
-  });
-
-  it('guestGuard lets signed-out users through', () => {
-    expect(run(guestGuard)).toBe(true);
   });
 
   it.each([

@@ -3,21 +3,18 @@ import { CanActivateFn, Router } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { AuthState } from './auth.state';
 
-/** Pages for signed-in users; others go to sign-in and come back after. */
+/**
+ * Pages for signed-in users. Others go to the landing page, which opens
+ * sign-in and comes back here after.
+ */
 export const authGuard: CanActivateFn = (_route, state) => {
   const signedIn = inject(Store).selectSnapshot(AuthState.isAuthenticated);
   return (
     signedIn ||
-    inject(Router).createUrlTree(['/sign-in'], {
+    inject(Router).createUrlTree(['/'], {
       queryParams: { returnUrl: state.url },
     })
   );
-};
-
-/** The sign-in page, which makes no sense once signed in. */
-export const guestGuard: CanActivateFn = () => {
-  const signedIn = inject(Store).selectSnapshot(AuthState.isAuthenticated);
-  return !signedIn || inject(Router).createUrlTree(['/']);
 };
 
 /**

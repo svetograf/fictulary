@@ -51,7 +51,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 };
 
 /**
- * Sends the user to sign in if they're on a page behind authGuard. When a
+ * Sends the user to the landing page, which opens sign-in, if they're on a page behind authGuard. When a
  * navigation is in progress (e.g. the profile request on app load), waits
  * for it to finish first, since `router.url` still shows the old page.
  */
@@ -59,7 +59,7 @@ function leaveRestrictedPage(router: Router, nav: NavController): void {
   const redirect = () => {
     if (isRestricted(router.routerState.snapshot.root)) {
       // As the root: the pages in the stack need a session.
-      nav.navigateRoot(['/sign-in'], {
+      nav.navigateRoot(['/'], {
         queryParams: { returnUrl: router.url },
       });
     }

@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, effect, inject, untracked } from '@angular/core';
+import { Component, effect, inject, input, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   IonButton,
@@ -42,6 +42,9 @@ import { BooksState } from './books.state';
 })
 export class BookListPage implements ViewWillEnter {
   protected readonly booksService = inject(BooksService);
+
+  /** From the query string: a page that needed a session (see authGuard). */
+  readonly returnUrl = input<string>();
 
   protected readonly signedIn = select(AuthState.isAuthenticated);
   protected readonly books = select(BooksState.books);

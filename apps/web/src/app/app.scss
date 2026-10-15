@@ -46,14 +46,6 @@ nav {
   ion-button.active {
     --background: rgb(var(--ion-text-color-rgb) / 12%);
   }
-
-  // "Sign in": a filled primary pill.
-  ion-button.sign-in {
-    --background: var(--ion-color-primary);
-    --color: var(--ion-color-primary-contrast);
-    --background-hover: var(--ion-color-primary-contrast);
-    --background-focused: var(--ion-color-primary-contrast);
-  }
 }
 
 // Fills the space under the header; Ionic positions it over the whole app.

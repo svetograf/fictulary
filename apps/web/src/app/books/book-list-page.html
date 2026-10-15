@@ -1,6 +1,6 @@
 <ion-content>
   @if (!signedIn()) {
-    <app-landing />
+    <app-landing [returnUrl]="returnUrl()" />
   } @else {
     <div class="page-content">
       <header class="page-header">

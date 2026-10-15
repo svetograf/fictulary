@@ -17,7 +17,6 @@ import { SignInFail, SignInSuccess, SignOut } from './auth.actions';
 import { AuthService } from './auth.service';
 import { AuthState } from './auth.state';
 import { AccountPage } from './account-page';
-import { SignInPage } from './sign-in-page';
 import { SocialLoginService } from './social-login.service';
 import { ada, authResponse } from './testing';
 import { WelcomePage } from './welcome-page';
@@ -69,7 +68,6 @@ describe('auth pages', () => {
       providers: [
         provideRouter(
           [
-            { path: 'sign-in', component: SignInPage },
             { path: 'welcome', component: WelcomePage },
             { path: 'account', component: AccountPage },
             { path: '**', children: [] },
@@ -83,102 +81,6 @@ describe('auth pages', () => {
       ],
     });
     harness = await RouterTestingHarness.create();
-  });
-
-  describe('SignInPage', () => {
-    it('prepares the providers and signs in with each', async () => {
-      await harness.navigateByUrl('/sign-in');
-      await harness.fixture.whenStable();
-      expect(social.prepare).toHaveBeenCalled();
-
-      button('Continue with Apple')?.click();
-      button('Continue with Google')?.click();
-      expect(auth.signInWithApple).toHaveBeenCalled();
-      expect(auth.signInWithGoogle).toHaveBeenCalled();
-    });
-
-    it('hides Apple when the API has no Apple config', async () => {
-      social.providers.mockResolvedValue({ apple: null, devSignIn: false });
-      await harness.navigateByUrl('/sign-in');
-      await harness.fixture.whenStable();
-      expect(button('Continue with Apple')).toBeUndefined();
-      expect(button('Continue with Google')).toBeDefined();
-    });
-
-    it('keeps Google when the provider config fails to load', async () => {
-      social.providers.mockRejectedValue(new Error('offline'));
-      await harness.navigateByUrl('/sign-in');
-      await harness.fixture.whenStable();
-      expect(button('Continue with Apple')).toBeUndefined();
-      expect(button('Continue with Google')).toBeDefined();
-    });
-
-    it('clears a stale error each time it is shown', async () => {
-      await harness.navigateByUrl('/sign-in');
-      // Ionic's router outlet calls this; the plain one in tests doesn't.
-      const instance = harness.routeDebugElement
-        ?.componentInstance as SignInPage;
-      instance.ionViewWillEnter();
-      expect(auth.clearError).toHaveBeenCalled();
-    });
-
-    it('shows sign-in errors', async () => {
-      await harness.navigateByUrl('/sign-in');
-      await dispatch(new SignInFail('Invalid Google sign-in'));
-      expect(text(page()?.querySelector('p.error[role=alert]'))).toBe(
-        'Invalid Google sign-in',
-      );
-    });
-
-    it('hides the dev form unless the API enables it', async () => {
-      await harness.navigateByUrl('/sign-in');
-      expect(page()?.querySelector('form.dev')).toBeNull();
-    });
-
-    it('signs in through the dev form when enabled', async () => {
-      social.providers.mockResolvedValue({ apple: null, devSignIn: true });
-      await harness.navigateByUrl('/sign-in');
-      await harness.fixture.whenStable();
-
-      fill('ion-input[formcontrolname=email]', ' dev@example.com ');
-      await submit();
-      expect(auth.devSignIn).toHaveBeenCalledWith({
-        email: 'dev@example.com',
-        name: undefined,
-      });
-    });
-
-    it('validates the dev form', async () => {
-      social.providers.mockResolvedValue({ apple: null, devSignIn: true });
-      await harness.navigateByUrl('/sign-in');
-      await harness.fixture.whenStable();
-
-      fill('ion-input[formcontrolname=email]', 'not-an-email');
-      await submit();
-      expect(auth.devSignIn).not.toHaveBeenCalled();
-      await ionicUpdates();
-      expect(shownErrors(page())).toEqual(['Enter a valid email address.']);
-    });
-
-    it('returns to the requested page after signing in', async () => {
-      await harness.navigateByUrl('/sign-in?returnUrl=%2Fbook%2F3');
-      await dispatch(new SignInSuccess(authResponse()));
-      expect(TestBed.inject(Router).url).toBe('/book/3');
-    });
-
-    it('asks new users without a name for one first', async () => {
-      await harness.navigateByUrl('/sign-in?returnUrl=%2Fbook%2F3');
-      await dispatch(
-        new SignInSuccess({ ...authResponse(), user: { ...ada, name: null } }),
-      );
-      expect(TestBed.inject(Router).url).toBe('/welcome?returnUrl=%2Fbook%2F3');
-    });
-
-    it('ignores return URLs pointing to other sites', async () => {
-      await harness.navigateByUrl('/sign-in?returnUrl=%2F%2Fevil.example');
-      await dispatch(new SignInSuccess(authResponse()));
-      expect(TestBed.inject(Router).url).toBe('/');
-    });
   });
 
   describe('WelcomePage', () => {

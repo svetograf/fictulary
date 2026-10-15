@@ -39,10 +39,13 @@ describe('App', () => {
     expect((await render('/')).querySelector('ion-header')).toBeNull();
   });
 
-  it('offers sign in when signed out, away from the home page', async () => {
-    const text = (await render('/book/3')).querySelector('nav')?.textContent;
-    expect(text).toContain('Sign in');
+  it('keeps the signed-in links out of the header when signed out', async () => {
+    // Signed out, only the auth callback page shows the header.
+    const text = (await render('/auth/callback')).querySelector(
+      'nav',
+    )?.textContent;
     expect(text).not.toContain('Upload');
+    expect(text).not.toContain('Sign in');
   });
 
   it('shows the upload link and the user when signed in', async () => {

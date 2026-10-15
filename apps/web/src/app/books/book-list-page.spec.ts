@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { AlertController } from '@ionic/angular';
+import { AlertController, ModalController } from '@ionic/angular';
 import { provideRouter } from '@angular/router';
 import { BookSummary } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
@@ -22,6 +22,8 @@ const book: BookSummary = {
 };
 
 describe('BookListPage', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   const booksService = { loadBooks: vi.fn(), deleteBook: vi.fn() };
   /** The confirmation alert's answer. */
   let confirmed = true;
@@ -31,13 +33,20 @@ describe('BookListPage', () => {
       onDidDismiss: async () => ({ role: confirmed ? 'confirm' : 'cancel' }),
     })),
   };
+  const modals = { create: vi.fn(async () => ({ present: vi.fn() })) };
   const settle = () => new Promise((resolve) => setTimeout(resolve));
 
-  const render = async ({ signedIn = true } = {}) => {
+  const render = async ({
+    signedIn = true,
+    returnUrl,
+  }: { signedIn?: boolean; returnUrl?: string } = {}) => {
     if (signedIn) {
       TestBed.inject(Store).dispatch(new SignInSuccess(authResponse()));
     }
     const fixture = TestBed.createComponent(BookListPage);
+    if (returnUrl) {
+      fixture.componentRef.setInput('returnUrl', returnUrl);
+    }
     await fixture.whenStable();
     return fixture;
   };
@@ -45,6 +54,8 @@ describe('BookListPage', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     localStorage.clear();
+    // jsdom has none; the sign-in dialog picks its layout with it.
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
     await TestBed.configureTestingModule({
       imports: [BookListPage],
       providers: [
@@ -52,6 +63,7 @@ describe('BookListPage', () => {
         provideStore([AuthState, BooksState]),
         { provide: BooksService, useValue: booksService },
         { provide: AlertController, useValue: alerts },
+        { provide: ModalController, useValue: modals },
       ],
     }).compileComponents();
   });
@@ -75,12 +87,22 @@ describe('BookListPage', () => {
     expect(booksService.loadBooks).not.toHaveBeenCalled();
     const element: HTMLElement = fixture.nativeElement;
     expect(element.querySelector('app-landing')).not.toBeNull();
-    const [signIn, signUp] = element.querySelectorAll('app-landing ion-button');
+    const [signIn, signUp] = element.querySelectorAll<HTMLElement>(
+      'app-landing ion-button',
+    );
     expect(signIn.textContent?.trim()).toBe('Sign in');
-    expect((signIn as { href?: string }).href).toBe('/sign-in');
     expect(signUp.textContent?.trim()).toBe('Sign up');
-    expect((signUp as { href?: string }).href).toBe('/sign-in?mode=sign-up');
+    expect(modals.create).not.toHaveBeenCalled();
+    signUp.click();
+    await settle();
+    expect(modals.create).toHaveBeenCalledTimes(1);
     expect(element.querySelector('.books ion-item')).toBeNull();
+  });
+
+  it('opens sign-in right away when a page needed a session', async () => {
+    await render({ signedIn: false, returnUrl: '/upload' });
+    await settle();
+    expect(modals.create).toHaveBeenCalledTimes(1);
   });
 
   it('switches to the guest view on sign-out', async () => {

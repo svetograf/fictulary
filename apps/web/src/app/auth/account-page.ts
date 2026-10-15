@@ -72,7 +72,7 @@ export class AccountPage implements ViewWillEnter {
       title: 'Delete your account?',
       message:
         'Your books, dictionary and word statuses are deleted for good, ' +
-        'and Fictulary loses access to your Apple or Google sign-in. ' +
+        'and Fictulary loses access to the account you signed in with. ' +
         'This cannot be undone.',
       confirm: 'Delete account',
     })

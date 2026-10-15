@@ -1,9 +1,10 @@
 import {
   Component,
+  InjectionToken,
+  Injector,
   computed,
   effect,
   inject,
-  input,
   resource,
 } from '@angular/core';
 import {
@@ -14,17 +15,14 @@ import {
 } from '@angular/forms';
 import {
   IonButton,
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardTitle,
-  IonContent,
+  IonButtons,
+  IonHeader,
   IonIcon,
   IonInput,
   IonSpinner,
+  IonToolbar,
+  ModalController,
   NavController,
-  ViewWillEnter,
 } from '@ionic/angular';
 import { select } from '@ngxs/store';
 import { safeReturnUrl } from './auth.guards';
@@ -32,37 +30,43 @@ import { AuthService } from './auth.service';
 import { AuthState } from './auth.state';
 import { SocialLoginService } from './social-login.service';
 
+export interface SignInDialogData {
+  /** `sign-up` retitles the dialog; signing up is signing in. */
+  mode: 'sign-in' | 'sign-up';
+  /** Where to go after signing in. */
+  returnUrl?: string;
+}
+
+export const SIGN_IN_DIALOG_DATA = new InjectionToken<SignInDialogData>(
+  'SIGN_IN_DIALOG_DATA',
+);
+
+/** Matches the word dialog: a centered dialog from here, a sheet below. */
+const DESKTOP = '(min-width: 768px) and (min-height: 600px)';
+
 @Component({
-  selector: 'app-sign-in-page',
+  selector: 'app-sign-in-dialog',
   imports: [
     IonButton,
-    IonCard,
-    IonCardContent,
-    IonCardHeader,
-    IonCardSubtitle,
-    IonCardTitle,
-    IonContent,
+    IonButtons,
+    IonHeader,
     IonIcon,
     IonInput,
     IonSpinner,
+    IonToolbar,
     ReactiveFormsModule,
   ],
-  templateUrl: './sign-in-page.html',
-  styleUrls: ['./auth-page.scss', './sign-in-page.scss'],
-  // Pages in ion-router-outlet need this class for layout and transitions.
-  host: { class: 'ion-page' },
+  templateUrl: './sign-in-dialog.html',
+  styleUrl: './sign-in-dialog.scss',
 })
-export class SignInPage implements ViewWillEnter {
+export class SignInDialog {
   protected readonly auth = inject(AuthService);
+  private readonly data = inject(SIGN_IN_DIALOG_DATA);
+  private readonly modals = inject(ModalController);
   private readonly nav = inject(NavController);
   private readonly social = inject(SocialLoginService);
 
-  /** Where to go after signing in; bound from the query string. */
-  readonly returnUrl = input<string>();
-  /** `sign-up` from the landing page's Sign up; the same sign-in, retitled. */
-  readonly mode = input<string>();
-  protected readonly signingUp = computed(() => this.mode() === 'sign-up');
-
+  protected readonly signingUp = this.data.mode === 'sign-up';
   protected readonly submitting = select(AuthState.submitting);
   protected readonly error = select(AuthState.error);
   private readonly signedIn = select(AuthState.isAuthenticated);
@@ -92,13 +96,19 @@ export class SignInPage implements ViewWillEnter {
   });
 
   constructor() {
+    // An error from an earlier attempt would otherwise still be showing.
+    this.auth.clearError();
     this.social.prepare();
     effect(() => {
       if (!this.signedIn()) {
         return;
       }
-      const returnUrl = safeReturnUrl(this.returnUrl());
-      // As the root, so Back doesn't return to this page.
+      const returnUrl = safeReturnUrl(this.data.returnUrl);
+      void this.modals.dismiss();
+      // Right away, as the root, so Back doesn't return to the landing page.
+      // Navigating only once the dialog has faded out would let App's own
+      // name prompt (for restored sessions) redirect first, with the wrong
+      // return URL; this later navigation replaces that one.
       if (this.needsName()) {
         this.nav.navigateRoot(['/welcome'], { queryParams: { returnUrl } });
       } else {
@@ -107,9 +117,8 @@ export class SignInPage implements ViewWillEnter {
     });
   }
 
-  // Ionic keeps this page alive, so a stale error could still be showing.
-  ionViewWillEnter(): void {
-    this.auth.clearError();
+  protected close(): void {
+    void this.modals.dismiss();
   }
 
   protected submitDev(): void {
@@ -123,4 +132,28 @@ export class SignInPage implements ViewWillEnter {
       name: name.trim() || undefined,
     });
   }
+}
+
+/**
+ * Returns a function that opens the sign-in dialog: centered on wide
+ * screens, a bottom sheet on phones. Call in an injection context
+ * (constructor or field initializer).
+ */
+export function injectSignInDialog(): (data: SignInDialogData) => void {
+  const modals = inject(ModalController);
+  const injector = inject(Injector);
+  return (data) => {
+    const desktop = matchMedia(DESKTOP).matches;
+    void modals
+      .create({
+        component: SignInDialog,
+        cssClass: desktop ? 'sign-in-dialog' : 'sign-in-sheet',
+        ...(!desktop && { breakpoints: [0, 1], initialBreakpoint: 1 }),
+        injector: Injector.create({
+          providers: [{ provide: SIGN_IN_DIALOG_DATA, useValue: data }],
+          parent: injector,
+        }),
+      })
+      .then((modal) => modal.present());
+  };
 }

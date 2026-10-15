@@ -78,7 +78,7 @@ let nextMenuId = 0;
 export class WordDialog {
   private readonly dictionary = inject(DictionaryService);
   private readonly data = inject(WORD_DIALOG_DATA);
-  private readonly modal = inject(ModalController);
+  private readonly modals = inject(ModalController);
   private readonly content = viewChild(IonContent);
 
   /** Opens the status menu; ids must be unique in the document. */
@@ -154,7 +154,7 @@ export class WordDialog {
   }
 
   protected close(): void {
-    this.modal.dismiss();
+    this.modals.dismiss();
   }
 
   protected next(): void {

@@ -23,12 +23,13 @@
   </div>
 
   <div class="actions">
-    <ion-button size="large" routerLink="/sign-in">Sign in</ion-button>
+    <ion-button size="large" (click)="openSignIn({ mode: 'sign-in' })"
+      >Sign in</ion-button
+    >
     <ion-button
       size="large"
       fill="outline"
-      routerLink="/sign-in"
-      [queryParams]="{ mode: 'sign-up' }"
+      (click)="openSignIn({ mode: 'sign-up' })"
       >Sign up</ion-button
     >
   </div>

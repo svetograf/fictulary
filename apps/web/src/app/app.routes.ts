@@ -1,5 +1,5 @@
 import { Route } from '@angular/router';
-import { authGuard, guestGuard } from './auth/auth.guards';
+import { authGuard } from './auth/auth.guards';
 
 export const appRoutes: Route[] = [
   {
@@ -8,13 +8,6 @@ export const appRoutes: Route[] = [
     title: 'Books',
     loadComponent: () =>
       import('./books/book-list-page').then((m) => m.BookListPage),
-  },
-  {
-    path: 'sign-in',
-    title: 'Sign in',
-    canActivate: [guestGuard],
-    loadComponent: () =>
-      import('./auth/sign-in-page').then((m) => m.SignInPage),
   },
   {
     path: 'auth/callback',

@@ -27,7 +27,7 @@ import { AuthState } from './auth/auth.state';
 import { AUTH_CALLBACK_PATH } from './auth/social-login.service';
 
 /** Pages that handle a missing name themselves or must not be left. */
-const NAME_PROMPT_EXEMPT = ['/welcome', '/sign-in', AUTH_CALLBACK_PATH];
+const NAME_PROMPT_EXEMPT = ['/welcome', AUTH_CALLBACK_PATH];
 
 @Component({
   imports: [
@@ -74,7 +74,7 @@ export class App {
 
   constructor() {
     // A restored session whose user never picked a name (e.g. closed the
-    // app on the welcome page). Fresh sign-ins are routed by SignInPage.
+    // app on the welcome page). Fresh sign-ins are routed by SignInDialog.
     effect(() => {
       const url = this.router.url;
       const path = url.split(/[?#]/)[0];
