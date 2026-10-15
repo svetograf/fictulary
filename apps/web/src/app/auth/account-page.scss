@@ -1,0 +1,17 @@
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 420px;
+
+  ion-card {
+    margin: 0;
+  }
+}
+
+.danger {
+  p {
+    margin: 0 0 16px;
+  }
+}

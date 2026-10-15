@@ -14,7 +14,7 @@ export const authGuard: CanActivateFn = (_route, state) => {
   );
 };
 
-/** Sign-in and sign-up pages, which make no sense once signed in. */
+/** The sign-in page, which makes no sense once signed in. */
 export const guestGuard: CanActivateFn = () => {
   const signedIn = inject(Store).selectSnapshot(AuthState.isAuthenticated);
   return !signedIn || inject(Router).createUrlTree(['/']);

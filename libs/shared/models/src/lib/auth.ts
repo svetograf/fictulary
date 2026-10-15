@@ -1,11 +1,6 @@
 export const USER_NAME_MAX_LENGTH = 100;
 /** RFC 5321 limit for an email address. */
 export const USER_EMAIL_MAX_LENGTH = 254;
-// Password limits and the sign-up/sign-in requests below go away with the
-// web app's email sign-in pages; the API no longer accepts passwords.
-export const USER_PASSWORD_MIN_LENGTH = 8;
-/** Caps the work spent hashing a single password. */
-export const USER_PASSWORD_MAX_LENGTH = 128;
 
 export interface User {
   id: number;
@@ -14,17 +9,6 @@ export interface User {
   email: string;
   /** ISO 8601 timestamp. */
   createdAt: string;
-}
-
-export interface SignUpRequest {
-  name: string;
-  email: string;
-  password: string;
-}
-
-export interface SignInRequest {
-  email: string;
-  password: string;
 }
 
 export enum AuthProvider {
@@ -47,6 +31,21 @@ export interface AppleSignInRequest {
   /** Sent by Apple to the client only on the first authorization. */
   givenName?: string;
   familyName?: string;
+}
+
+/** Local development only; see the API's DevAuthModule. */
+export interface DevSignInRequest {
+  email: string;
+  /** Only used when the account is created. */
+  name?: string;
+}
+
+/** What the sign-in page offers, from `GET /api/auth/providers`. */
+export interface AuthProvidersConfig {
+  google: { webClientId: string };
+  apple: { servicesId: string; redirectUri: string };
+  /** Whether `POST /api/auth/dev` is enabled. */
+  devSignIn: boolean;
 }
 
 export interface UpdateProfileRequest {

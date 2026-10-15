@@ -1,7 +1,15 @@
 import { Injectable } from '@angular/core';
-import { SignInRequest, SignUpRequest } from '@fictulary/shared/models';
+import { DevSignInRequest } from '@fictulary/shared/models';
 import { dispatch } from '@ngxs/store';
-import { ClearAuthError, SignIn, SignOut, SignUp } from './auth.actions';
+import {
+  ClearAuthError,
+  DeleteAccount,
+  DevSignIn,
+  SignInWithApple,
+  SignInWithGoogle,
+  SignOut,
+  UpdateProfile,
+} from './auth.actions';
 
 /**
  * Entry point for components to trigger auth actions. API calls and the
@@ -9,17 +17,32 @@ import { ClearAuthError, SignIn, SignOut, SignUp } from './auth.actions';
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly dispatchSignUp = dispatch(SignUp);
-  private readonly dispatchSignIn = dispatch(SignIn);
+  private readonly dispatchGoogle = dispatch(SignInWithGoogle);
+  private readonly dispatchApple = dispatch(SignInWithApple);
+  private readonly dispatchDev = dispatch(DevSignIn);
+  private readonly dispatchUpdateProfile = dispatch(UpdateProfile);
+  private readonly dispatchDeleteAccount = dispatch(DeleteAccount);
   private readonly dispatchSignOut = dispatch(SignOut);
   private readonly dispatchClearError = dispatch(ClearAuthError);
 
-  signUp(payload: SignUpRequest) {
-    return this.dispatchSignUp(payload);
+  signInWithGoogle() {
+    return this.dispatchGoogle();
   }
 
-  signIn(payload: SignInRequest) {
-    return this.dispatchSignIn(payload);
+  signInWithApple() {
+    return this.dispatchApple();
+  }
+
+  devSignIn(payload: DevSignInRequest) {
+    return this.dispatchDev(payload);
+  }
+
+  updateProfile(name: string) {
+    return this.dispatchUpdateProfile(name);
+  }
+
+  deleteAccount() {
+    return this.dispatchDeleteAccount();
   }
 
   signOut() {

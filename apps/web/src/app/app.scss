@@ -41,8 +41,8 @@ nav {
     --background: rgb(255 255 255 / 12%);
   }
 
-  // "Sign up": a white pill, inverted from the usual filled button.
-  ion-button.sign-up {
+  // "Sign in": a white pill, inverted from the usual filled button.
+  ion-button.sign-in {
     --background: #ffffff;
     --color: var(--ion-color-primary);
     --background-hover: var(--ion-color-primary);

@@ -6,15 +6,15 @@ Web sign-in ships first; this file holds the native-specific work so we can pick
 ## Prerequisites (already done for web)
 - API endpoints `POST /auth/google`, `POST /auth/apple`, `PATCH /me`, `DELETE /me` exist.
 - `@capgo/capacitor-social-login` is used on web, so the client code is shared.
-- The API accepts several audiences: `GOOGLE_CLIENT_IDS` (comma list) and both
-  `APPLE_BUNDLE_ID` and `APPLE_SERVICES_ID`. Native only adds new values to these.
+- The API accepts several audiences: `GOOGLE_WEB_CLIENT_ID` plus the optional
+  `GOOGLE_IOS_CLIENT_ID`, and both `APPLE_BUNDLE_ID` and `APPLE_SERVICES_ID`.
 
 ## Provider console setup (native-only parts)
 **Google Cloud** (same project as the web client)
 - [ ] OAuth client **iOS**: bundle ID. Note the iOS client ID and its reversed client ID (URL scheme).
 - [ ] OAuth client **Android**: package name + SHA-1 of the debug keystore, the release/upload keystore,
       and the Play App Signing key (Play Console → App integrity).
-- [ ] Add the iOS client ID to `GOOGLE_CLIENT_IDS` on the API. Android sends tokens issued for the
+- [ ] Set `GOOGLE_IOS_CLIENT_ID` on the API. Android sends tokens issued for the
       **web** client ID (used as `serverClientId`), so it needs no new value.
 
 **Apple Developer**
@@ -33,7 +33,12 @@ Web sign-in ships first; this file holds the native-specific work so we can pick
       in `Info.plist`; initialize the plugin with the iOS client ID.
 - [ ] Android: initialize with `webClientId` (= web client ID, used as server client ID). Apple on Android
       goes through a web flow using the Services ID and its return URL — verify the plugin's Android Apple setup.
-- [ ] Apple nonce: same flow as web (raw nonce to API, SHA-256 to Apple).
+- [ ] Apple nonce: on web the app passes Apple the SHA-256 hex of a random nonce and sends the raw one
+      to the API (`apps/web/src/app/auth/social-login.service.ts`). Check whether the plugin's iOS side
+      hashes the nonce itself before passing it to `ASAuthorizationAppleIDRequest`; if it does, pass it
+      the raw nonce on iOS so the token doesn't carry a double hash.
+- [ ] Native config source: the web app reads client ids from `GET /api/auth/providers`; add the iOS
+      client id there (and use it as `iOSClientId`) once it exists.
 
 ## Token storage
 - [ ] Switch `tokenStorage` (`apps/web/src/app/auth/token-storage.ts`) to `@capacitor/preferences` on native

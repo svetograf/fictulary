@@ -18,7 +18,7 @@ describe('AppleClient', () => {
         .toString(),
       bundleId: 'com.example.fictulary',
       servicesId: 'com.example.fictulary.web',
-      redirectUri: 'https://app.example.com/auth/apple/callback',
+      redirectUri: 'https://app.example.com/auth/callback',
     },
   } as ConfigType<typeof oauthConfig>;
   const jwt = new JwtService();

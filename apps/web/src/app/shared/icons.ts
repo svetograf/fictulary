@@ -17,9 +17,11 @@ import {
   helpCircleOutline,
   languageOutline,
   libraryOutline,
+  logoApple,
   logOutOutline,
   personCircleOutline,
   schoolOutline,
+  settingsOutline,
   trashOutline,
 } from 'ionicons/icons';
 
@@ -46,9 +48,11 @@ export function registerIcons(): void {
     helpCircleOutline,
     languageOutline,
     libraryOutline,
+    logoApple,
     logOutOutline,
     personCircleOutline,
     schoolOutline,
+    settingsOutline,
     trashOutline,
   });
 }

@@ -21,6 +21,7 @@ import { BooksService } from './books/books.service';
 import { DefinitionsService } from './dictionary/definitions.service';
 import { DictionaryController } from './dictionary/dictionary.controller';
 import { DictionaryService } from './dictionary/dictionary.service';
+import { oauthConfig } from './config/oauth.config';
 import { User } from './users/user.entity';
 
 /** Every controller in the app. Add new controllers here. */
@@ -34,6 +35,7 @@ const CONTROLLERS: Type[] = [
 
 /** The only routes reachable without a token. */
 const PUBLIC_ROUTES = [
+  'GET /api/auth/providers',
   'POST /api/auth/google',
   'POST /api/auth/apple',
   'POST /api/auth/dev',
@@ -84,6 +86,13 @@ describe('route protection', () => {
       controllers: CONTROLLERS,
       providers: [
         { provide: APP_GUARD, useClass: JwtAuthGuard },
+        {
+          provide: oauthConfig.KEY,
+          useValue: {
+            google: { webClientId: 'web' },
+            apple: { servicesId: 'web', redirectUri: 'https://x/cb' },
+          },
+        },
         {
           provide: getRepositoryToken(User),
           useValue: { existsBy: resolves(true) },
@@ -181,8 +190,9 @@ describe('route protection', () => {
     async (name) => {
       const [method, path] = name.split(' ');
       const response = await send({ method, path });
-      // Reaches validation (400) rather than being turned away (401).
-      expect(response.status).toBe(400);
+      // Reaches the handler (200) or validation (400) rather than being
+      // turned away (401).
+      expect(response.status).toBe(method === 'GET' ? 200 : 400);
     },
   );
 });

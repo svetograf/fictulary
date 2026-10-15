@@ -1,0 +1,62 @@
+.providers {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+
+  ion-button {
+    margin: 0;
+    height: 44px;
+    text-transform: none;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  ion-icon,
+  svg {
+    width: 20px;
+    height: 20px;
+    margin-inline-end: 12px;
+  }
+
+  // Apple's black button; it stays black in dark mode too.
+  .apple {
+    --background: #000000;
+    --background-hover: #333333;
+    --color: #ffffff;
+  }
+
+  // Google's light button.
+  .google {
+    --background: #ffffff;
+    --background-hover: #f2f2f2;
+    --color: #1f1f1f;
+    --border-color: #747775;
+    --border-style: solid;
+    --border-width: 1px;
+  }
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  color: var(--ion-color-medium);
+}
+
+.error {
+  margin-top: 16px;
+}
+
+.dev {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--ion-border-color);
+}
+
+.dev-title {
+  margin: 0;
+  font-weight: 500;
+  color: var(--ion-color-medium);
+}

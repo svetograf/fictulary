@@ -24,7 +24,8 @@ import { BooksModule } from './books/books.module';
     }),
     BooksModule,
     AuthModule,
-    // Not the string form: it treats an unset variable as enabled.
+    // Not the string form: it treats an unset variable as enabled. Keep in
+    // sync with AuthController.providers().
     ConditionalModule.registerWhen(
       DevAuthModule,
       (env) => env.AUTH_DEV_LOGIN === 'true',

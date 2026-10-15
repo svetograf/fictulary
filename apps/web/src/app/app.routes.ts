@@ -17,11 +17,24 @@ export const appRoutes: Route[] = [
       import('./auth/sign-in-page').then((m) => m.SignInPage),
   },
   {
-    path: 'sign-up',
-    title: 'Sign up',
-    canActivate: [guestGuard],
+    path: 'auth/callback',
+    title: 'Signing in',
     loadComponent: () =>
-      import('./auth/sign-up-page').then((m) => m.SignUpPage),
+      import('./auth/auth-callback-page').then((m) => m.AuthCallbackPage),
+  },
+  {
+    path: 'welcome',
+    title: 'Welcome',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./auth/welcome-page').then((m) => m.WelcomePage),
+  },
+  {
+    path: 'account',
+    title: 'Account',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./auth/account-page').then((m) => m.AccountPage),
   },
   {
     path: 'book/:id',

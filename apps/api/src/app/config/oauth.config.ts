@@ -12,14 +12,6 @@ function required(name: string): string {
   return value;
 }
 
-/** Splits a comma-separated list, dropping blanks. */
-function list(value: string): string[] {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 export const oauthConfig = registerAs('oauth', () => {
   const encryptionKey = Buffer.from(
     required('TOKEN_ENCRYPTION_KEY'),
@@ -33,8 +25,10 @@ export const oauthConfig = registerAs('oauth', () => {
 
   return {
     google: {
-      /** Every OAuth client id whose ID tokens we accept (web, iOS). */
-      clientIds: list(required('GOOGLE_CLIENT_IDS')),
+      /** Used by the web app; Android also gets tokens issued to it. */
+      webClientId: required('GOOGLE_WEB_CLIENT_ID'),
+      /** Optional until the iOS app exists. */
+      iosClientId: process.env.GOOGLE_IOS_CLIENT_ID || null,
     },
     apple: {
       teamId: required('APPLE_TEAM_ID'),
@@ -45,7 +39,10 @@ export const oauthConfig = registerAs('oauth', () => {
       bundleId: required('APPLE_BUNDLE_ID'),
       /** Audience of ID tokens from the web flow. */
       servicesId: required('APPLE_SERVICES_ID'),
-      /** Return URL registered on the Services ID; sent when exchanging web codes. */
+      /**
+       * Return URL registered on the Services ID: the web app's
+       * `/auth/callback`. Sent when exchanging codes from the web flow.
+       */
       redirectUri: required('APPLE_REDIRECT_URI'),
     },
     /** AES-256-GCM key for provider tokens stored in the database. */

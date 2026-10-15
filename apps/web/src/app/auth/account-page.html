@@ -1,0 +1,44 @@
+<ion-content>
+  <div class="page-content">
+    <div class="cards">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Account</ion-card-title>
+          @if (user(); as current) {
+            <ion-card-subtitle>{{ current.email }}</ion-card-subtitle>
+          }
+        </ion-card-header>
+        <ion-card-content>
+          <app-name-form
+            submitLabel="Save"
+            [name]="user()?.name ?? null"
+            [submitting]="submitting()"
+            [error]="error()"
+            (save)="auth.updateProfile($event)"
+          />
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="danger">
+        <ion-card-header>
+          <ion-card-title>Delete account</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Deletes your account with all your books and your dictionary.</p>
+          <div class="actions">
+            <ion-button
+              color="danger"
+              [disabled]="deleting()"
+              (click)="deleteAccount()"
+            >
+              Delete account
+            </ion-button>
+            @if (deleting()) {
+              <ion-spinner name="crescent" />
+            }
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+</ion-content>

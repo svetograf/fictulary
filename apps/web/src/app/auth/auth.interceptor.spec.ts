@@ -66,12 +66,14 @@ describe('authInterceptor', () => {
     ).toBe(false);
   });
 
-  it('never sends the token to sign-in, sign-up or other hosts', () => {
+  it('never sends the token to sign-in endpoints or other hosts', () => {
     signIn();
-    http.post('/api/sign-in', {}).subscribe();
+    http.post('/api/auth/google', {}).subscribe();
     http.get('https://example.com/api/x').subscribe();
     expect(
-      backend.expectOne('/api/sign-in').request.headers.has('Authorization'),
+      backend
+        .expectOne('/api/auth/google')
+        .request.headers.has('Authorization'),
     ).toBe(false);
     expect(
       backend

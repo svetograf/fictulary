@@ -14,8 +14,8 @@ import { SignOut } from './auth.actions';
 import { authGuard } from './auth.guards';
 import { AuthState } from './auth.state';
 
-/** Endpoints that must not carry a token (they issue one). */
-const PUBLIC_AUTH_URLS = ['/api/sign-in', '/api/sign-up'];
+/** Sign-in endpoints, which must not carry a token (they issue one). */
+const PUBLIC_AUTH_PREFIX = '/api/auth/';
 
 /**
  * Signs API requests with the stored JWT. If the API rejects the token
@@ -31,7 +31,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (
     !token ||
     !req.url.startsWith('/api/') ||
-    PUBLIC_AUTH_URLS.includes(req.url)
+    req.url.startsWith(PUBLIC_AUTH_PREFIX)
   ) {
     return next(req);
   }

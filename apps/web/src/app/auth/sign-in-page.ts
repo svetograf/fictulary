@@ -1,21 +1,20 @@
-import { Component, effect, inject, input } from '@angular/core';
+import { Component, effect, inject, input, resource } from '@angular/core';
 import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import {
   IonButton,
   IonCard,
   IonCardContent,
   IonCardHeader,
+  IonCardSubtitle,
   IonCardTitle,
   IonContent,
   IonIcon,
   IonInput,
-  IonInputPasswordToggle,
   IonSpinner,
   NavController,
   ViewWillEnter,
@@ -24,6 +23,7 @@ import { select } from '@ngxs/store';
 import { safeReturnUrl } from './auth.guards';
 import { AuthService } from './auth.service';
 import { AuthState } from './auth.state';
+import { SocialLoginService } from './social-login.service';
 
 @Component({
   selector: 'app-sign-in-page',
@@ -32,23 +32,23 @@ import { AuthState } from './auth.state';
     IonCard,
     IonCardContent,
     IonCardHeader,
+    IonCardSubtitle,
     IonCardTitle,
     IonContent,
     IonIcon,
     IonInput,
-    IonInputPasswordToggle,
     IonSpinner,
     ReactiveFormsModule,
-    RouterLink,
   ],
   templateUrl: './sign-in-page.html',
-  styleUrl: './auth-page.scss',
+  styleUrls: ['./auth-page.scss', './sign-in-page.scss'],
   // Pages in ion-router-outlet need this class for layout and transitions.
   host: { class: 'ion-page' },
 })
 export class SignInPage implements ViewWillEnter {
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly nav = inject(NavController);
+  private readonly social = inject(SocialLoginService);
 
   /** Where to go after signing in; bound from the query string. */
   readonly returnUrl = input<string>();
@@ -56,46 +56,52 @@ export class SignInPage implements ViewWillEnter {
   protected readonly submitting = select(AuthState.submitting);
   protected readonly error = select(AuthState.error);
   private readonly signedIn = select(AuthState.isAuthenticated);
+  private readonly needsName = select(AuthState.needsName);
 
-  protected readonly form = new FormGroup({
+  /** Whether the API offers dev sign-in (local development only). */
+  protected readonly devSignIn = resource({
+    loader: () => this.social.providers().then((config) => config.devSignIn),
+    defaultValue: false,
+  });
+
+  protected readonly devForm = new FormGroup({
     email: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.email],
     }),
-    password: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
+    name: new FormControl('', { nonNullable: true }),
   });
-  protected readonly controls = this.form.controls;
 
   constructor() {
+    this.social.prepare();
     effect(() => {
-      if (this.signedIn()) {
-        // As the root, so Back doesn't return to this form.
-        this.nav.navigateRoot(safeReturnUrl(this.returnUrl()));
+      if (!this.signedIn()) {
+        return;
       }
-    });
-    effect(() => {
-      if (this.submitting()) {
-        this.form.disable();
+      const returnUrl = safeReturnUrl(this.returnUrl());
+      // As the root, so Back doesn't return to this page.
+      if (this.needsName()) {
+        this.nav.navigateRoot(['/welcome'], { queryParams: { returnUrl } });
       } else {
-        this.form.enable();
+        this.nav.navigateRoot(returnUrl);
       }
     });
   }
 
-  // Also when coming back from the other auth page, which Ionic keeps alive.
+  // Ionic keeps this page alive, so a stale error could still be showing.
   ionViewWillEnter(): void {
     this.auth.clearError();
   }
 
-  protected submit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+  protected submitDev(): void {
+    if (this.devForm.invalid) {
+      this.devForm.markAllAsTouched();
       return;
     }
-    const { email, password } = this.form.getRawValue();
-    this.auth.signIn({ email: email.trim(), password });
+    const { email, name } = this.devForm.getRawValue();
+    this.auth.devSignIn({
+      email: email.trim(),
+      name: name.trim() || undefined,
+    });
   }
 }

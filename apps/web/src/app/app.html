@@ -34,21 +34,14 @@
             </ion-button>
             <ion-button fill="clear" id="account-menu" aria-label="Account">
               <ion-icon slot="start" name="person-circle-outline" />
-              <span class="account-name">{{ user()?.name ?? 'Account' }}</span>
+              <span class="account-name">{{ user()?.name || 'Account' }}</span>
             </ion-button>
           } @else {
             <ion-button
-              fill="clear"
+              class="sign-in"
               routerLink="/sign-in"
               routerDirection="root"
-              routerLinkActive="active"
               >Sign in</ion-button
-            >
-            <ion-button
-              class="sign-up"
-              routerLink="/sign-up"
-              routerDirection="root"
-              >Sign up</ion-button
             >
           }
         </nav>
@@ -68,10 +61,21 @@
         <ion-list lines="none">
           @if (user(); as current) {
             <div class="account-details">
-              <strong>{{ current.name }}</strong>
+              @if (current.name) {
+                <strong>{{ current.name }}</strong>
+              }
               <span>{{ current.email }}</span>
             </div>
           }
+          <ion-item
+            button
+            [detail]="false"
+            routerLink="/account"
+            routerDirection="root"
+          >
+            <ion-icon slot="start" name="settings-outline" aria-hidden="true" />
+            <ion-label>Account</ion-label>
+          </ion-item>
           <ion-item button [detail]="false" (click)="signOut()">
             <ion-icon slot="start" name="log-out-outline" aria-hidden="true" />
             <ion-label>Sign out</ion-label>

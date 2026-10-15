@@ -1,4 +1,8 @@
-import { AuthResponse, User } from '@fictulary/shared/models';
+import {
+  AuthProvidersConfig,
+  AuthResponse,
+  User,
+} from '@fictulary/shared/models';
 import {
   Body,
   Controller,
@@ -6,9 +10,12 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Patch,
   Post,
 } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
+import { oauthConfig } from '../config/oauth.config';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
 import { AppleSignInDto } from './dto/apple-sign-in.dto';
@@ -19,7 +26,24 @@ import { Public } from './public.decorator';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    @Inject(oauthConfig.KEY)
+    private readonly oauth: ConfigType<typeof oauthConfig>,
+  ) {}
+
+  /** Client ids the sign-in page needs; none of them are secret. */
+  @Public()
+  @Get('auth/providers')
+  providers(): AuthProvidersConfig {
+    const { google, apple } = this.oauth;
+    return {
+      google: { webClientId: google.webClientId },
+      apple: { servicesId: apple.servicesId, redirectUri: apple.redirectUri },
+      // Mirrors how AppModule decides to load DevAuthModule.
+      devSignIn: process.env.AUTH_DEV_LOGIN === 'true',
+    };
+  }
 
   /** Signs in (creating the account on first use) with a Google ID token. */
   @Public()

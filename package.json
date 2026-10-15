@@ -65,6 +65,8 @@
     "@angular/forms": "~22.1.0",
     "@angular/platform-browser": "~22.1.0",
     "@angular/router": "~22.1.0",
+    "@capacitor/core": "^8.5.3",
+    "@capgo/capacitor-social-login": "^8.5.18",
     "@ionic/angular": "^9.0.7",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.4",

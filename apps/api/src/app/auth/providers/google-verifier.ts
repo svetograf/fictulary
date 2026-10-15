@@ -16,11 +16,14 @@ export class GoogleVerifier {
   ) {}
 
   async verify(idToken: string): Promise<ProviderProfile> {
+    const { webClientId, iosClientId } = this.config.google;
     let payload;
     try {
       const ticket = await this.client.verifyIdToken({
         idToken,
-        audience: this.config.google.clientIds,
+        audience: [webClientId, iosClientId].filter(
+          (id): id is string => id !== null,
+        ),
       });
       payload = ticket.getPayload();
     } catch {

@@ -1,28 +1,17 @@
-import {
-  AuthResponse,
-  SignInRequest,
-  SignUpRequest,
-  User,
-} from '@fictulary/shared/models';
+import { AuthResponse, DevSignInRequest, User } from '@fictulary/shared/models';
 
-export class SignUp {
-  static readonly type = '[Auth] SIGN_UP';
-  constructor(public readonly payload: SignUpRequest) {}
+export class SignInWithGoogle {
+  static readonly type = '[Auth] SIGN_IN_WITH_GOOGLE';
 }
 
-export class SignUpSuccess {
-  static readonly type = '[Auth] SIGN_UP_SUCCESS';
-  constructor(public readonly response: AuthResponse) {}
+export class SignInWithApple {
+  static readonly type = '[Auth] SIGN_IN_WITH_APPLE';
 }
 
-export class SignUpFail {
-  static readonly type = '[Auth] SIGN_UP_FAIL';
-  constructor(public readonly error: string) {}
-}
-
-export class SignIn {
-  static readonly type = '[Auth] SIGN_IN';
-  constructor(public readonly payload: SignInRequest) {}
+/** Local development only; the API enables it with AUTH_DEV_LOGIN. */
+export class DevSignIn {
+  static readonly type = '[Auth] DEV_SIGN_IN';
+  constructor(public readonly payload: DevSignInRequest) {}
 }
 
 export class SignInSuccess {
@@ -31,8 +20,9 @@ export class SignInSuccess {
 }
 
 export class SignInFail {
+  /** `null` when the user cancelled, which needs no message. */
   static readonly type = '[Auth] SIGN_IN_FAIL';
-  constructor(public readonly error: string) {}
+  constructor(public readonly error: string | null) {}
 }
 
 /** Copies a saved token from localStorage into the store on app load. */
@@ -51,6 +41,30 @@ export class LoadMeSuccess {
 
 export class LoadMeFail {
   static readonly type = '[Auth] LOAD_ME_FAIL';
+  constructor(public readonly error: string) {}
+}
+
+export class UpdateProfile {
+  static readonly type = '[Auth] UPDATE_PROFILE';
+  constructor(public readonly name: string) {}
+}
+
+export class UpdateProfileSuccess {
+  static readonly type = '[Auth] UPDATE_PROFILE_SUCCESS';
+  constructor(public readonly user: User) {}
+}
+
+export class UpdateProfileFail {
+  static readonly type = '[Auth] UPDATE_PROFILE_FAIL';
+  constructor(public readonly error: string) {}
+}
+
+export class DeleteAccount {
+  static readonly type = '[Auth] DELETE_ACCOUNT';
+}
+
+export class DeleteAccountFail {
+  static readonly type = '[Auth] DELETE_ACCOUNT_FAIL';
   constructor(public readonly error: string) {}
 }
 
