@@ -19,19 +19,19 @@
     margin-inline-end: 12px;
   }
 
-  // Apple's black button; it stays black in dark mode too.
+  // Apple's white button, its style for dark backgrounds.
   .apple {
-    --background: #000000;
-    --background-hover: #333333;
-    --color: #ffffff;
+    --background: #ffffff;
+    --background-hover: #000000;
+    --color: #000000;
   }
 
-  // Google's light button.
+  // Google's dark button.
   .google {
-    --background: #ffffff;
-    --background-hover: #f2f2f2;
-    --color: #1f1f1f;
-    --border-color: #747775;
+    --background: #131314;
+    --background-hover: #ffffff;
+    --color: #e3e3e3;
+    --border-color: #8e918f;
     --border-style: solid;
     --border-width: 1px;
   }

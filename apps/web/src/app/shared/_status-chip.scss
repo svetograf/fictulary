@@ -1,34 +1,35 @@
-// Brand colors of the word status chips, keyed by `data-status`.
-// Shared by the book page, the names review and the word dialog so a
-// status looks the same everywhere. Text on each fill meets 4.5:1.
+// Colors of the word status chips, keyed by `data-status`, from the
+// logo's gradient. Shared by the book page, the names review and the word
+// dialog so a status looks the same everywhere. Text on each fill meets
+// 4.5:1.
 @mixin colors {
-  // Lines/accent orange, navy text (8.3:1).
+  // The logo's orange, dark blue text (9.5:1).
   &[data-status='UNKNOWN'] {
-    background: #faa968;
-    color: #01204e;
+    background: #ffb03e;
+    color: #150063;
   }
 
-  // Secondary teal, as on the selected toggle (4.5:1).
+  // Secondary blue, as on the selected toggle (7.8:1).
   &[data-status='LEARNING'] {
-    background: #028391;
+    background: #79a6ff;
+    color: #0f0c33;
+  }
+
+  // The logo's purple, light text (5.6:1).
+  &[data-status='KNOWN'] {
+    background: #9340c5;
     color: #ffffff;
   }
 
-  // Text navy on the page background (12:1).
-  &[data-status='KNOWN'] {
-    background: #01204e;
-    color: #f6dcac;
-  }
-
-  // Primary orange, as in the header, navy text (4.8:1).
+  // The pink between the logo's orange and purple, dark blue text (5.8:1).
   &[data-status='NAME'] {
-    background: #f85525;
-    color: #01204e;
+    background: #e66aa8;
+    color: #150063;
   }
 
-  // Set aside: a faint navy tint.
+  // Set aside: a faint tint of the text color.
   &[data-status='TRASH'] {
-    background: color-mix(in srgb, #01204e 12%, transparent);
-    color: #01204e;
+    background: rgb(var(--ion-text-color-rgb) / 12%);
+    color: var(--ion-text-color);
   }
 }

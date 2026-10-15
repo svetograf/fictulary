@@ -60,8 +60,8 @@ button.step {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--ion-text-color) 38%, transparent);
-  color: #ffffff;
+  background: var(--ion-border-color);
+  color: var(--ion-text-color);
   font-size: 13px;
 }
 
@@ -73,6 +73,7 @@ button.step {
 
   .number {
     background: var(--ion-color-primary);
+    color: var(--ion-color-primary-contrast);
   }
 }
 

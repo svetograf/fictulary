@@ -8,12 +8,12 @@ ion-toolbar {
 
 .header {
   --background: var(--app-brand);
-  --color: #ffffff;
+  --color: var(--ion-text-color);
   --padding-start: 24px;
   --padding-end: 8px;
 
   ion-button {
-    --color: #ffffff;
+    --color: var(--ion-text-color);
   }
 }
 
@@ -61,11 +61,6 @@ ion-toolbar {
   &:disabled {
     cursor: default;
     opacity: 0.6;
-  }
-
-  // The Name chip is the header's own orange; outline it to keep it visible.
-  &[data-status='NAME'] {
-    box-shadow: inset 0 0 0 1.5px #ffffff;
   }
 }
 

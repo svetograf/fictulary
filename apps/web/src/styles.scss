@@ -1,68 +1,87 @@
-// Ionic's required CSS, its typography and the padding utilities.
+@use 'sass:color';
+@use 'fonts/mukta';
+
+// Ionic's required CSS, its typography, the padding utilities and its dark
+// palette (always on), which the theme below adjusts.
 @use '@ionic/angular/css/core.css';
 @use '@ionic/angular/css/normalize.css';
 @use '@ionic/angular/css/structure.css';
 @use '@ionic/angular/css/typography.css';
 @use '@ionic/angular/css/padding.css';
+@use '@ionic/angular/css/palettes/dark.always.css';
 
-// Light theme built from the brand colors:
-//   background #f6dcac, primary #f85525, secondary #028391, text #01204e,
-//   lines and accents #faa968.
-// Where a brand color is too light to read as text, a deeper tone of the
-// same hue is used, e.g. primary #b12d00 instead of #f85525.
-:root {
-  color-scheme: light;
+// Dark theme built from the logo's colors: the book's dark blue as the
+// background, and the circle's gradient (orange #ffb03e, purple #9340c5,
+// blue #5991ff) for the accents. Where a logo color is too dark to read on
+// the background, a lighter tone of the same hue is used, e.g. primary
+// #c08cf2 instead of #9340c5.
+$background: #0f0c33;
+$text: #eeecff;
 
-  --ion-font-family: Roboto, 'Helvetica Neue', sans-serif;
-  --ion-background-color: #f6dcac;
-  --ion-background-color-rgb: 246, 220, 172;
-  --ion-text-color: #01204e;
-  --ion-text-color-rgb: 1, 32, 78;
+// Ionic's color variables: the color, its RGB, its contrast and the
+// darker (shade) and lighter (tint) tones Ionic uses for pressed and
+// hovered states.
+@mixin ion-color($name, $base, $contrast) {
+  --ion-color-#{$name}: #{$base};
+  --ion-color-#{$name}-rgb:
+    #{color.channel($base, 'red', $space: rgb)},
+    #{color.channel($base, 'green', $space: rgb)},
+    #{color.channel($base, 'blue', $space: rgb)};
+  --ion-color-#{$name}-contrast: #{$contrast};
+  --ion-color-#{$name}-contrast-rgb:
+    #{color.channel($contrast, 'red', $space: rgb)},
+    #{color.channel($contrast, 'green', $space: rgb)},
+    #{color.channel($contrast, 'blue', $space: rgb)};
+  --ion-color-#{$name}-shade: #{color.mix(#000000, $base, 12%)};
+  --ion-color-#{$name}-tint: #{color.mix(#ffffff, $base, 10%)};
+}
+
+// `.ios`/`.md` match the dark palette's own selectors, which outrank a
+// plain `:root`.
+:root,
+:root.ios,
+:root.md {
+  color-scheme: dark;
+
+  --ion-font-family: Mukta, 'Helvetica Neue', sans-serif;
+  --ion-background-color: #{$background};
+  --ion-background-color-rgb: 15, 12, 51;
+  --ion-text-color: #{$text};
+  --ion-text-color-rgb: 238, 236, 255;
   // Dividers and table rules; decorative, so the low contrast is fine.
-  --ion-border-color: #faa968;
+  --ion-border-color: #2f2a72;
   --ion-item-background: transparent;
-  --ion-card-background: #f6dcac;
+  --ion-card-background: #17134a;
+  --ion-toolbar-background: #17134a;
+  --ion-overlay-background-color: #1d1856;
 
-  // The brand orange of the header and the accent of the dialog footer.
-  --app-brand: #f85525;
-  --app-accent: #faa968;
+  // Raised surfaces: the header and the word dialog's header, and the
+  // dialog's footer.
+  --app-brand: #17134a;
+  --app-accent: #1d1856;
+  // Sunken surfaces, darker than the page: the body of forms like Upload.
+  --app-sunken: #0a0825;
+  // The logo's gradient, as a thin line under the header.
+  --app-gradient: linear-gradient(90deg, #ffb03e, #9340c5 50%, #5991ff);
 
-  --ion-color-primary: #b12d00;
-  --ion-color-primary-rgb: 177, 45, 0;
-  --ion-color-primary-contrast: #ffffff;
-  --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #9c2800;
-  --ion-color-primary-tint: #b9421a;
+  // Ionic tints inputs, segments and the like with these steps from the
+  // background toward the text (and back).
+  @for $i from 1 through 19 {
+    --ion-background-color-step-#{$i * 50}: #{color.mix(
+        $text,
+        $background,
+        $i * 5%
+      )};
+    --ion-text-color-step-#{$i * 50}: #{color.mix($background, $text, $i * 5%)};
+  }
 
-  --ion-color-secondary: #028391;
-  --ion-color-secondary-rgb: 2, 131, 145;
-  --ion-color-secondary-contrast: #ffffff;
-  --ion-color-secondary-contrast-rgb: 255, 255, 255;
-  --ion-color-secondary-shade: #027380;
-  --ion-color-secondary-tint: #1b8f9c;
-
+  @include ion-color(primary, #c08cf2, #150063);
+  @include ion-color(secondary, #79a6ff, #0f0c33);
   // Accent color, used for calls to action such as "Learn".
-  --ion-color-tertiary: #8d4f15;
-  --ion-color-tertiary-rgb: 141, 79, 21;
-  --ion-color-tertiary-contrast: #ffffff;
-  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
-  --ion-color-tertiary-shade: #7c4612;
-  --ion-color-tertiary-tint: #98612c;
-
-  --ion-color-danger: #ba1a1a;
-  --ion-color-danger-rgb: 186, 26, 26;
-  --ion-color-danger-contrast: #ffffff;
-  --ion-color-danger-contrast-rgb: 255, 255, 255;
-  --ion-color-danger-shade: #a41717;
-  --ion-color-danger-tint: #c13131;
-
-  // Secondary text, e.g. hints and counts (7:1 on the background).
-  --ion-color-medium: #5b4039;
-  --ion-color-medium-rgb: 91, 64, 57;
-  --ion-color-medium-contrast: #ffffff;
-  --ion-color-medium-contrast-rgb: 255, 255, 255;
-  --ion-color-medium-shade: #503832;
-  --ion-color-medium-tint: #6b534d;
+  @include ion-color(tertiary, #ffb03e, #150063);
+  @include ion-color(danger, #ff7083, #0f0c33);
+  // Secondary text, e.g. hints and counts (8.2:1 on the background).
+  @include ion-color(medium, #aba6d9, #0f0c33);
 }
 
 html,
@@ -92,14 +111,14 @@ ion-card {
   --highlight-color-valid: var(--ion-color-primary);
 }
 
-// Plain links use the primary color (#b12d00, 4.8:1 on the background)
-// instead of the browser's blue and purple.
+// Plain links use the primary color (7.4:1 on the background) instead of
+// the browser's blue and purple.
 a {
   color: var(--ion-color-primary);
   text-underline-offset: 2px;
 
   &:hover {
-    color: #872000;
+    color: var(--ion-color-primary-tint);
   }
 
   &:focus-visible {

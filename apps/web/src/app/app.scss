@@ -1,7 +1,13 @@
-// Brand orange header with light text and icons.
+// A raised header with light text and icons, over a thin line in the
+// logo's gradient.
+ion-header {
+  border-bottom: 2px solid;
+  border-image: var(--app-gradient) 1;
+}
+
 ion-toolbar {
   --background: var(--app-brand);
-  --color: #ffffff;
+  --color: var(--ion-text-color);
   --padding-start: 16px;
   --padding-end: 8px;
 }
@@ -11,16 +17,16 @@ ion-toolbar {
   align-items: center;
   gap: 12px;
 
-  > ion-icon {
+  .logo {
     flex: none;
-    font-size: 24px;
+    display: block;
   }
 }
 
 h1 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 400;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 nav {
@@ -30,23 +36,23 @@ nav {
   margin-left: auto;
 
   ion-button {
-    --color: #ffffff;
-    --background-hover: #ffffff;
-    --background-focused: #ffffff;
+    --color: var(--ion-text-color);
+    --background-hover: var(--ion-text-color);
+    --background-focused: var(--ion-text-color);
     margin: 0;
     text-transform: none;
   }
 
   ion-button.active {
-    --background: rgb(255 255 255 / 12%);
+    --background: rgb(var(--ion-text-color-rgb) / 12%);
   }
 
-  // "Sign in": a white pill, inverted from the usual filled button.
+  // "Sign in": a filled primary pill.
   ion-button.sign-in {
-    --background: #ffffff;
-    --color: var(--ion-color-primary);
-    --background-hover: var(--ion-color-primary);
-    --background-focused: var(--ion-color-primary);
+    --background: var(--ion-color-primary);
+    --color: var(--ion-color-primary-contrast);
+    --background-hover: var(--ion-color-primary-contrast);
+    --background-focused: var(--ion-color-primary-contrast);
   }
 }
 
