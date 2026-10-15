@@ -16,11 +16,6 @@ import {
 } from '@angular/forms';
 import {
   IonButton,
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardTitle,
   IonCheckbox,
   IonIcon,
   IonInput,
@@ -61,11 +56,6 @@ const PASTED_FILE_NAME = 'pasted-text.txt';
     DecimalPipe,
     ReactiveFormsModule,
     IonButton,
-    IonCard,
-    IonCardContent,
-    IonCardHeader,
-    IonCardSubtitle,
-    IonCardTitle,
     IonCheckbox,
     IonIcon,
     IonInput,

@@ -1,163 +1,169 @@
-<ion-card>
-  <ion-card-header>
-    <ion-card-title>Upload a book</ion-card-title>
-    <ion-card-subtitle>
+<!-- Styled like the word dialog: a header band, the fields, a footer band
+     with the actions. -->
+<form
+  [formGroup]="form"
+  (ngSubmit)="submit()"
+  class="panel"
+  aria-labelledby="upload-title"
+>
+  <header class="header">
+    <h2 id="upload-title" class="title">Upload a book</h2>
+  </header>
+
+  <div class="body">
+    <p class="intro">
       We count every word in the text; the text itself is not stored.
-    </ion-card-subtitle>
-  </ion-card-header>
+    </p>
 
-  <ion-card-content>
-    <form [formGroup]="form" (ngSubmit)="submit()" class="upload-form">
-      <ion-segment
-        formControlName="source"
-        aria-label="Where the text comes from"
-        class="source"
+    <ion-segment
+      formControlName="source"
+      aria-label="Where the text comes from"
+      class="source"
+    >
+      <ion-segment-button value="file" layout="icon-start">
+        <ion-icon name="cloud-upload-outline" aria-hidden="true" />
+        <ion-label>From a file</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="text" layout="icon-start">
+        <ion-icon name="clipboard-outline" aria-hidden="true" />
+        <ion-label>Paste text</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    @if (source() === 'file') {
+      <div
+        class="drop-zone"
+        role="button"
+        tabindex="0"
+        aria-label="Choose a .txt file or drop it here"
+        [class.dragging]="dragging()"
+        [class.invalid]="controls.file.invalid && controls.file.touched"
+        [class.disabled]="form.disabled"
+        (click)="fileInput.click()"
+        (keydown.enter)="fileInput.click()"
+        (keydown.space)="$event.preventDefault(); fileInput.click()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="dragging.set(false)"
+        (drop)="onDrop($event)"
       >
-        <ion-segment-button value="file" layout="icon-start">
-          <ion-icon name="cloud-upload-outline" aria-hidden="true" />
-          <ion-label>From a file</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="text" layout="icon-start">
-          <ion-icon name="clipboard-outline" aria-hidden="true" />
-          <ion-label>Paste text</ion-label>
-        </ion-segment-button>
-      </ion-segment>
-
-      @if (source() === 'file') {
-        <div
-          class="drop-zone"
-          role="button"
-          tabindex="0"
-          aria-label="Choose a .txt file or drop it here"
-          [class.dragging]="dragging()"
-          [class.invalid]="controls.file.invalid && controls.file.touched"
-          [class.disabled]="form.disabled"
-          (click)="fileInput.click()"
-          (keydown.enter)="fileInput.click()"
-          (keydown.space)="$event.preventDefault(); fileInput.click()"
-          (dragover)="onDragOver($event)"
-          (dragleave)="dragging.set(false)"
-          (drop)="onDrop($event)"
-        >
-          <input
-            #fileInput
-            type="file"
-            accept=".txt,text/plain"
-            hidden
-            [disabled]="form.disabled"
-            (change)="onFileInput($event)"
-          />
-          @if (controls.file.value; as selected) {
-            <ion-icon name="document-text-outline" aria-hidden="true" />
-            <span class="file-name">{{ selected.name }}</span>
-            <span class="file-size"
-              >{{ selected.size / 1024 | number: '1.0-1' }} KB</span
-            >
-            <ion-button
-              fill="clear"
-              shape="round"
-              color="medium"
-              class="remove"
-              aria-label="Remove file"
-              [disabled]="form.disabled"
-              (click)="$event.stopPropagation(); clearFile()"
-            >
-              <ion-icon slot="icon-only" name="close" />
-            </ion-button>
-          } @else {
-            <ion-icon name="cloud-upload-outline" aria-hidden="true" />
-            <span>Drop a .txt file here or <strong>browse</strong></span>
-            <span class="file-size">Up to {{ limits.fileSizeMb }} MB</span>
-          }
-        </div>
-        @if (controls.file.touched) {
-          @if (controls.file.hasError('required')) {
-            <ion-note color="danger" class="file-error"
-              >Please choose a file.</ion-note
-            >
-          } @else if (controls.file.hasError('fileExtension')) {
-            <ion-note color="danger" class="file-error"
-              >Only .txt files are supported.</ion-note
-            >
-          } @else if (controls.file.hasError('maxFileSize')) {
-            <ion-note color="danger" class="file-error"
-              >File must be {{ limits.fileSizeMb }} MB or smaller.</ion-note
-            >
-          }
-        }
-      } @else {
-        <ion-textarea
-          class="text"
-          label="Book text"
-          labelPlacement="floating"
-          fill="outline"
-          formControlName="text"
-          [rows]="10"
-          required
-          placeholder="Paste the text of the book here"
-          [helperText]="
-            (textKb() | number: '1.0-1') + ' KB / ' + limits.fileSizeMb + ' MB'
-          "
-          [errorText]="
-            controls.text.hasError('maxTextBytes')
-              ? 'Text must be ' + limits.fileSizeMb + ' MB or smaller.'
-              : 'Please paste some text.'
-          "
+        <input
+          #fileInput
+          type="file"
+          accept=".txt,text/plain"
+          hidden
+          [disabled]="form.disabled"
+          (change)="onFileInput($event)"
         />
-      }
-
-      <ion-input
-        label="Book name"
-        labelPlacement="floating"
-        fill="outline"
-        formControlName="name"
-        required
-        [counter]="true"
-        [maxlength]="limits.name"
-        errorText="Book name is required."
-      />
-
-      <ion-textarea
-        label="Description (optional)"
-        labelPlacement="floating"
-        fill="outline"
-        formControlName="description"
-        [rows]="3"
-        [counter]="true"
-        [maxlength]="limits.description"
-      />
-
-      <ion-checkbox
-        formControlName="allKnown"
-        labelPlacement="end"
-        justify="start"
-        class="all-known"
-      >
-        Add all the words as known to my dictionary
-      </ion-checkbox>
-
-      <div class="actions">
-        <ion-button type="submit" [disabled]="uploading()">
-          <ion-icon slot="start" name="cloud-upload-outline" />
-          Upload
-        </ion-button>
-        @if (uploading()) {
-          <div class="progress" role="status">
-            @if (progress(); as percent) {
-              <ion-progress-bar [value]="percent / 100" />
-              <span>Uploading… {{ percent }}%</span>
-            } @else {
-              <ion-spinner name="crescent" />
-              <span>{{
-                progress() === null ? 'Counting words…' : 'Uploading…'
-              }}</span>
-            }
-          </div>
+        @if (controls.file.value; as selected) {
+          <ion-icon name="document-text-outline" aria-hidden="true" />
+          <span class="file-name">{{ selected.name }}</span>
+          <span class="file-size"
+            >{{ selected.size / 1024 | number: '1.0-1' }} KB</span
+          >
+          <ion-button
+            fill="clear"
+            shape="round"
+            color="medium"
+            class="remove"
+            aria-label="Remove file"
+            [disabled]="form.disabled"
+            (click)="$event.stopPropagation(); clearFile()"
+          >
+            <ion-icon slot="icon-only" name="close" />
+          </ion-button>
+        } @else {
+          <ion-icon name="cloud-upload-outline" aria-hidden="true" />
+          <span>Drop a .txt file here or <strong>browse</strong></span>
+          <span class="file-size">Up to {{ limits.fileSizeMb }} MB</span>
         }
       </div>
-    </form>
-  </ion-card-content>
-</ion-card>
+      @if (controls.file.touched) {
+        @if (controls.file.hasError('required')) {
+          <ion-note color="danger" class="file-error"
+            >Please choose a file.</ion-note
+          >
+        } @else if (controls.file.hasError('fileExtension')) {
+          <ion-note color="danger" class="file-error"
+            >Only .txt files are supported.</ion-note
+          >
+        } @else if (controls.file.hasError('maxFileSize')) {
+          <ion-note color="danger" class="file-error"
+            >File must be {{ limits.fileSizeMb }} MB or smaller.</ion-note
+          >
+        }
+      }
+    } @else {
+      <ion-textarea
+        class="text"
+        label="Book text"
+        labelPlacement="floating"
+        fill="outline"
+        formControlName="text"
+        [rows]="10"
+        required
+        placeholder="Paste the text of the book here"
+        [helperText]="
+          (textKb() | number: '1.0-1') + ' KB / ' + limits.fileSizeMb + ' MB'
+        "
+        [errorText]="
+          controls.text.hasError('maxTextBytes')
+            ? 'Text must be ' + limits.fileSizeMb + ' MB or smaller.'
+            : 'Please paste some text.'
+        "
+      />
+    }
+
+    <ion-input
+      label="Book name"
+      labelPlacement="floating"
+      fill="outline"
+      formControlName="name"
+      required
+      [counter]="true"
+      [maxlength]="limits.name"
+      errorText="Book name is required."
+    />
+
+    <ion-textarea
+      label="Description (optional)"
+      labelPlacement="floating"
+      fill="outline"
+      formControlName="description"
+      [rows]="3"
+      [counter]="true"
+      [maxlength]="limits.description"
+    />
+
+    <ion-checkbox
+      formControlName="allKnown"
+      labelPlacement="end"
+      justify="start"
+      class="all-known"
+    >
+      Add all the words as known to my dictionary
+    </ion-checkbox>
+  </div>
+
+  <footer class="footer">
+    @if (uploading()) {
+      <div class="progress" role="status">
+        @if (progress(); as percent) {
+          <ion-progress-bar [value]="percent / 100" />
+          <span>Uploading… {{ percent }}%</span>
+        } @else {
+          <ion-spinner name="crescent" />
+          <span>{{
+            progress() === null ? 'Counting words…' : 'Uploading…'
+          }}</span>
+        }
+      </div>
+    }
+    <ion-button type="submit" [disabled]="uploading()">
+      <ion-icon slot="start" name="cloud-upload-outline" />
+      Upload
+    </ion-button>
+  </footer>
+</form>
 
 @if (error(); as message) {
   <p class="error" role="alert">

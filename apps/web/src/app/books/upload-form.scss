@@ -4,11 +4,54 @@
   gap: 16px;
 }
 
-.upload-form {
+// The word dialog's look: header and footer bands around a darker body.
+.panel {
+  overflow: hidden;
+  border: 1px solid var(--ion-border-color);
+  border-radius: 12px;
+}
+
+.header,
+.footer {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+}
+
+.header {
+  padding: 0 24px;
+  background: var(--app-brand);
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-top: 8px;
+  padding: 16px 24px 24px;
+  background: var(--app-sunken);
+}
+
+.intro {
+  margin: 0;
+  color: var(--ion-color-medium);
+  font-size: 14px;
+}
+
+.footer {
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 0 16px;
+  background: var(--app-accent);
+
+  ion-button {
+    margin: 0;
+  }
 }
 
 .source {
@@ -74,15 +117,10 @@
   --min-height: 12em;
 }
 
-.actions,
 .progress {
   display: flex;
   align-items: center;
   gap: 16px;
-}
-
-.actions ion-button {
-  margin: 0;
 }
 
 .progress ion-progress-bar {
