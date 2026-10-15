@@ -82,6 +82,7 @@ so **open it and look at it**.
 | `wait <text>` / `wait-url <path>` | wait up to 15s for visible text or a URL ending |
 | `text [selector]` | print the inner text (default: the current page) |
 | `shot [name]` | wait 600ms for Ionic animations, then save `out/<name>.png` |
+| `viewport <w> <h>` | resize the page, e.g. `viewport 360 640` for a small phone |
 | `last-page` | switch to the newest tab or popup (e.g. the Google sign-in popup) |
 | `eval <js>` | evaluate JS in the page and print the result |
 | `errors` | print the browser console errors collected so far |

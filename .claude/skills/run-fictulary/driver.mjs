@@ -98,6 +98,9 @@ const commands = {
     console.log(page.url().slice(0, 120));
   },
   eval: async (...js) => console.log(await page.evaluate(js.join(' '))),
+  // Resizes the page, e.g. `viewport 360 640` for a small phone.
+  viewport: (width, height) =>
+    page.setViewportSize({ width: Number(width), height: Number(height) }),
   sleep: (ms) => page.waitForTimeout(Number(ms)),
   errors: () => console.log(errors.length ? errors.join('\n') : 'no console errors'),
 };
