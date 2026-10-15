@@ -3,12 +3,13 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, createPublicKey, JsonWebKey } from 'crypto';
-import { oauthConfig } from '../../config/oauth.config';
+import { AppleConfig, oauthConfig } from '../../config/oauth.config';
 import { ProviderProfile } from './provider-profile';
 
 const APPLE_ISSUER = 'https://appleid.apple.com';
@@ -49,12 +50,24 @@ export class AppleClient {
     private readonly config: ConfigType<typeof oauthConfig>,
   ) {}
 
+  /** Whether Sign in with Apple is configured (see oauthConfig). */
+  get enabled(): boolean {
+    return this.config.apple !== null;
+  }
+
+  private get apple(): AppleConfig {
+    if (!this.config.apple) {
+      throw new NotFoundException('Sign in with Apple is not available');
+    }
+    return this.config.apple;
+  }
+
   /**
    * Verifies an ID token. `nonce` is the raw nonce the client generated;
    * Apple received (and put in the token) its SHA-256 hex digest.
    */
   async verify(idToken: string, nonce: string): Promise<AppleIdentity> {
-    const { bundleId, servicesId } = this.config.apple;
+    const { bundleId, servicesId } = this.apple;
     let payload: AppleIdTokenPayload;
     try {
       const kid = this.jwt.decode<{ header?: { kid?: string } } | null>(
@@ -100,8 +113,8 @@ export class AppleClient {
       grant_type: 'authorization_code',
     });
     // Codes from the web flow are bound to the registered return URL.
-    if (clientId === this.config.apple.servicesId) {
-      body.set('redirect_uri', this.config.apple.redirectUri);
+    if (clientId === this.apple.servicesId) {
+      body.set('redirect_uri', this.apple.redirectUri);
     }
     const response = await fetch(TOKEN_URL, { method: 'POST', body });
     const result = (await response.json().catch(() => ({}))) as {
@@ -135,7 +148,7 @@ export class AppleClient {
 
   /** The short-lived ES256 JWT Apple accepts in place of a client secret. */
   private clientSecret(clientId: string): Promise<string> {
-    const { teamId, keyId, privateKey } = this.config.apple;
+    const { teamId, keyId, privateKey } = this.apple;
     return this.jwt.signAsync(
       {},
       {

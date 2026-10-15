@@ -43,7 +43,8 @@ export interface DevSignInRequest {
 /** What the sign-in page offers, from `GET /api/auth/providers`. */
 export interface AuthProvidersConfig {
   google: { webClientId: string };
-  apple: { servicesId: string; redirectUri: string };
+  /** Null when the API has no Apple config; the app hides the button. */
+  apple: { servicesId: string; redirectUri: string } | null;
   /** Whether `POST /api/auth/dev` is enabled. */
   devSignIn: boolean;
 }

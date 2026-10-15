@@ -1,7 +1,9 @@
 import { TokenCipher } from './token-cipher';
 
 describe('TokenCipher', () => {
-  const cipher = new TokenCipher({ encryptionKey: Buffer.alloc(32, 1) });
+  const cipher = new TokenCipher({
+    apple: { encryptionKey: Buffer.alloc(32, 1) },
+  });
 
   it('round-trips a token', () => {
     const encrypted = cipher.encrypt('refresh-token');
@@ -20,7 +22,9 @@ describe('TokenCipher', () => {
   });
 
   it('rejects data encrypted with another key', () => {
-    const other = new TokenCipher({ encryptionKey: Buffer.alloc(32, 2) });
+    const other = new TokenCipher({
+      apple: { encryptionKey: Buffer.alloc(32, 2) },
+    });
     expect(() => cipher.decrypt(other.encrypt('refresh-token'))).toThrow();
   });
 });

@@ -61,7 +61,10 @@ describe('auth pages', () => {
     vi.resetAllMocks();
     localStorage.clear();
     confirmed = true;
-    social.providers.mockResolvedValue({ devSignIn: false });
+    social.providers.mockResolvedValue({
+      apple: { servicesId: 'web', redirectUri: 'https://x/auth/callback' },
+      devSignIn: false,
+    });
     TestBed.configureTestingModule({
       providers: [
         provideRouter(
@@ -85,12 +88,29 @@ describe('auth pages', () => {
   describe('SignInPage', () => {
     it('prepares the providers and signs in with each', async () => {
       await harness.navigateByUrl('/sign-in');
+      await harness.fixture.whenStable();
       expect(social.prepare).toHaveBeenCalled();
 
       button('Continue with Apple')?.click();
       button('Continue with Google')?.click();
       expect(auth.signInWithApple).toHaveBeenCalled();
       expect(auth.signInWithGoogle).toHaveBeenCalled();
+    });
+
+    it('hides Apple when the API has no Apple config', async () => {
+      social.providers.mockResolvedValue({ apple: null, devSignIn: false });
+      await harness.navigateByUrl('/sign-in');
+      await harness.fixture.whenStable();
+      expect(button('Continue with Apple')).toBeUndefined();
+      expect(button('Continue with Google')).toBeDefined();
+    });
+
+    it('keeps Google when the provider config fails to load', async () => {
+      social.providers.mockRejectedValue(new Error('offline'));
+      await harness.navigateByUrl('/sign-in');
+      await harness.fixture.whenStable();
+      expect(button('Continue with Apple')).toBeUndefined();
+      expect(button('Continue with Google')).toBeDefined();
     });
 
     it('clears a stale error each time it is shown', async () => {
@@ -116,7 +136,7 @@ describe('auth pages', () => {
     });
 
     it('signs in through the dev form when enabled', async () => {
-      social.providers.mockResolvedValue({ devSignIn: true });
+      social.providers.mockResolvedValue({ apple: null, devSignIn: true });
       await harness.navigateByUrl('/sign-in');
       await harness.fixture.whenStable();
 
@@ -129,7 +149,7 @@ describe('auth pages', () => {
     });
 
     it('validates the dev form', async () => {
-      social.providers.mockResolvedValue({ devSignIn: true });
+      social.providers.mockResolvedValue({ apple: null, devSignIn: true });
       await harness.navigateByUrl('/sign-in');
       await harness.fixture.whenStable();
 

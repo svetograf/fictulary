@@ -74,6 +74,21 @@ describe('SocialLoginService', () => {
     });
   });
 
+  it('leaves Apple out of the plugin when the API has no Apple config', async () => {
+    plugin.login.mockResolvedValue({ result: { idToken: 'g' } });
+    const result = service.google();
+    await new Promise((resolve) => setTimeout(resolve));
+    http.expectOne('/api/auth/providers').flush({ ...config, apple: null });
+    await result;
+
+    expect(plugin.initialize).toHaveBeenCalledWith({
+      google: {
+        webClientId: 'google-web',
+        redirectUrl: `${window.location.origin}/auth/callback`,
+      },
+    });
+  });
+
   it('returns the Google ID token', async () => {
     plugin.login.mockResolvedValue({ result: { idToken: 'google-token' } });
     const result = service.google();

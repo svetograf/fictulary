@@ -102,12 +102,15 @@ export class SocialLoginService {
         const redirectUrl = `${window.location.origin}${AUTH_CALLBACK_PATH}`;
         return SocialLogin.initialize({
           google: { webClientId: google.webClientId, redirectUrl },
-          apple: {
-            clientId: apple.servicesId,
-            redirectUrl: apple.redirectUri,
-            // Returns the authorization code as `authorizationCode`.
-            useProperTokenExchange: true,
-          },
+          // Null when the API has no Apple config; the button is hidden then.
+          ...(apple && {
+            apple: {
+              clientId: apple.servicesId,
+              redirectUrl: apple.redirectUri,
+              // Returns the authorization code as `authorizationCode`.
+              useProperTokenExchange: true,
+            },
+          }),
         });
       })
       .catch((error) => {

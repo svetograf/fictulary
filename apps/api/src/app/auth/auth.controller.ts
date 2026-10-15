@@ -39,7 +39,10 @@ export class AuthController {
     const { google, apple } = this.oauth;
     return {
       google: { webClientId: google.webClientId },
-      apple: { servicesId: apple.servicesId, redirectUri: apple.redirectUri },
+      apple: apple && {
+        servicesId: apple.servicesId,
+        redirectUri: apple.redirectUri,
+      },
       // Mirrors how AppModule decides to load DevAuthModule.
       devSignIn: process.env.AUTH_DEV_LOGIN === 'true',
     };

@@ -62,10 +62,17 @@ describe('AuthService', () => {
   let users: ReturnType<typeof fakeRepository>;
   let identities: ReturnType<typeof fakeRepository>;
   let google: { verify: jest.Mock };
-  let apple: { verify: jest.Mock; exchangeCode: jest.Mock; revoke: jest.Mock };
+  let apple: {
+    enabled: boolean;
+    verify: jest.Mock;
+    exchangeCode: jest.Mock;
+    revoke: jest.Mock;
+  };
   let service: AuthService;
   const jwt = new JwtService({ secret: 'test-secret' });
-  const cipher = new TokenCipher({ encryptionKey: Buffer.alloc(32, 7) });
+  const cipher = new TokenCipher({
+    apple: { encryptionKey: Buffer.alloc(32, 7) },
+  });
 
   const googleProfile: ProviderProfile = {
     provider: AuthProvider.GOOGLE,
@@ -102,6 +109,7 @@ describe('AuthService', () => {
     };
     google = { verify: jest.fn().mockResolvedValue(googleProfile) };
     apple = {
+      enabled: true,
       verify: jest.fn().mockResolvedValue(appleIdentity),
       exchangeCode: jest.fn().mockResolvedValue('apple-refresh-token'),
       revoke: jest.fn().mockResolvedValue(undefined),
@@ -322,6 +330,15 @@ describe('AuthService', () => {
       apple.revoke.mockRejectedValue(new Error('Apple is down'));
 
       await service.deleteAccount(1);
+      expect(users.rows).toHaveLength(0);
+    });
+
+    it('deletes without revoking when Apple is no longer configured', async () => {
+      await service.signInWithApple(appleDto);
+      apple.enabled = false;
+
+      await service.deleteAccount(1);
+      expect(apple.revoke).not.toHaveBeenCalled();
       expect(users.rows).toHaveLength(0);
     });
 

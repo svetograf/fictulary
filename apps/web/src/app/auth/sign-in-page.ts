@@ -1,4 +1,11 @@
-import { Component, effect, inject, input, resource } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  resource,
+} from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -58,11 +65,20 @@ export class SignInPage implements ViewWillEnter {
   private readonly signedIn = select(AuthState.isAuthenticated);
   private readonly needsName = select(AuthState.needsName);
 
-  /** Whether the API offers dev sign-in (local development only). */
-  protected readonly devSignIn = resource({
-    loader: () => this.social.providers().then((config) => config.devSignIn),
-    defaultValue: false,
+  /**
+   * Which optional sign-ins the API offers: Apple (when configured) and dev
+   * sign-in (local development only). Google is always there.
+   */
+  private readonly providers = resource({
+    // A failed request just leaves the optional ones hidden.
+    loader: () => this.social.providers().catch(() => null),
   });
+  protected readonly appleEnabled = computed(
+    () => !!this.providers.value()?.apple,
+  );
+  protected readonly devSignIn = computed(
+    () => !!this.providers.value()?.devSignIn,
+  );
 
   protected readonly devForm = new FormGroup({
     email: new FormControl('', {

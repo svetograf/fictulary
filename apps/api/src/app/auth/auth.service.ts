@@ -116,7 +116,12 @@ export class AuthService {
         provider: AuthProvider.APPLE,
         appleRefreshToken: Not(IsNull()),
       });
-    for (const identity of identities) {
+    if (identities.length && !this.apple.enabled) {
+      this.logger.warn(
+        `Can't revoke Apple access for user ${userId}: Apple isn't configured`,
+      );
+    }
+    for (const identity of this.apple.enabled ? identities : []) {
       try {
         await this.apple.revoke(
           this.cipher.decrypt(identity.appleRefreshToken as string),

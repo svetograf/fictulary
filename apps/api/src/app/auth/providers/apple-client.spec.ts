@@ -1,5 +1,5 @@
 import { AuthProvider } from '@fictulary/shared/models';
-import { UnauthorizedException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { generateKeyPairSync, KeyObject } from 'crypto';
@@ -9,18 +9,18 @@ import { AppleClient, sha256Hex } from './apple-client';
 describe('AppleClient', () => {
   const signingKey = generateKeyPairSync('rsa', { modulusLength: 2048 });
   const clientKey = generateKeyPairSync('ec', { namedCurve: 'P-256' });
-  const config = {
-    apple: {
-      teamId: 'TEAM123',
-      keyId: 'KEY123',
-      privateKey: clientKey.privateKey
-        .export({ type: 'pkcs8', format: 'pem' })
-        .toString(),
-      bundleId: 'com.example.fictulary',
-      servicesId: 'com.example.fictulary.web',
-      redirectUri: 'https://app.example.com/auth/callback',
-    },
-  } as ConfigType<typeof oauthConfig>;
+  const apple = {
+    teamId: 'TEAM123',
+    keyId: 'KEY123',
+    privateKey: clientKey.privateKey
+      .export({ type: 'pkcs8', format: 'pem' })
+      .toString(),
+    bundleId: 'com.example.fictulary',
+    servicesId: 'com.example.fictulary.web',
+    redirectUri: 'https://app.example.com/auth/callback',
+    encryptionKey: Buffer.alloc(32),
+  };
+  const config = { apple } as ConfigType<typeof oauthConfig>;
   const jwt = new JwtService();
   const fetchMock = jest.fn();
   let client: AppleClient;
@@ -44,7 +44,7 @@ describe('AppleClient', () => {
         algorithm: 'RS256',
         keyid: kid,
         issuer: 'https://appleid.apple.com',
-        audience: config.apple.servicesId,
+        audience: apple.servicesId,
         expiresIn: '5m',
       },
     );
@@ -106,7 +106,7 @@ describe('AppleClient', () => {
                 email: 'ada@example.com',
                 nonce: sha256Hex('raw-nonce'),
                 iss: 'https://appleid.apple.com',
-                aud: config.apple.servicesId,
+                aud: apple.servicesId,
                 ...claims,
               },
               {
@@ -133,14 +133,14 @@ describe('AppleClient', () => {
       fetchMock.mockResolvedValue(json({ refresh_token: 'refresh-1' }));
 
       await expect(
-        client.exchangeCode('code-1', config.apple.servicesId),
+        client.exchangeCode('code-1', apple.servicesId),
       ).resolves.toBe('refresh-1');
 
       const [url, init] = fetchMock.mock.calls[0];
       const body = init.body as URLSearchParams;
       expect(url).toBe('https://appleid.apple.com/auth/token');
       expect(body.get('code')).toBe('code-1');
-      expect(body.get('redirect_uri')).toBe(config.apple.redirectUri);
+      expect(body.get('redirect_uri')).toBe(apple.redirectUri);
       await expect(
         jwt.verifyAsync(body.get('client_secret') as string, {
           publicKey: clientKey.publicKey
@@ -150,14 +150,14 @@ describe('AppleClient', () => {
         }),
       ).resolves.toMatchObject({
         iss: 'TEAM123',
-        sub: config.apple.servicesId,
+        sub: apple.servicesId,
         aud: 'https://appleid.apple.com',
       });
     });
 
     it('omits the redirect URI for native codes', async () => {
       fetchMock.mockResolvedValue(json({ refresh_token: 'refresh-1' }));
-      await client.exchangeCode('code-1', config.apple.bundleId);
+      await client.exchangeCode('code-1', apple.bundleId);
       const body = fetchMock.mock.calls[0][1].body as URLSearchParams;
       expect(body.has('redirect_uri')).toBe(false);
     });
@@ -165,15 +165,31 @@ describe('AppleClient', () => {
     it('rejects codes Apple refuses', async () => {
       fetchMock.mockResolvedValue(json({ error: 'invalid_grant' }, 400));
       await expect(
-        client.exchangeCode('code-1', config.apple.servicesId),
+        client.exchangeCode('code-1', apple.servicesId),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('when Apple is not configured', () => {
+    const disabled = new AppleClient({
+      google: { webClientId: 'web', iosClientId: null },
+      apple: null,
+    });
+
+    it('reports itself disabled and refuses Apple sign-ins', async () => {
+      expect(disabled.enabled).toBe(false);
+      expect(client.enabled).toBe(true);
+      await expect(
+        disabled.verify(await idToken(), 'raw-nonce'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 
   describe('revoke', () => {
     it('revokes the refresh token', async () => {
       fetchMock.mockResolvedValue(json({}));
-      await client.revoke('refresh-1', config.apple.bundleId);
+      await client.revoke('refresh-1', apple.bundleId);
 
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe('https://appleid.apple.com/auth/revoke');
@@ -183,7 +199,7 @@ describe('AppleClient', () => {
     it('throws when Apple refuses', async () => {
       fetchMock.mockResolvedValue(json({}, 400));
       await expect(
-        client.revoke('refresh-1', config.apple.bundleId),
+        client.revoke('refresh-1', apple.bundleId),
       ).rejects.toThrow();
     });
   });
