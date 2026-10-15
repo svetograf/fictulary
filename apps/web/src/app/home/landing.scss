@@ -1,7 +1,75 @@
 // Centered in the page, scrolling only when the screen is too short.
 :host {
+  position: relative;
   display: flex;
   min-height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+// An aurora along the bottom: three blurred glows in the logo's colors,
+// each drifting and swaying on its own cycle, fading out toward the top.
+.aurora {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: -1;
+  height: 50%;
+  pointer-events: none;
+  mask-image: linear-gradient(to top, #000 20%, transparent);
+}
+
+.glow {
+  position: absolute;
+  bottom: -50%;
+  width: 70%;
+  height: 90%;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  will-change: transform;
+  animation: drift 9s ease-in-out infinite alternate;
+
+  &.orange {
+    left: -10%;
+    background: #ffb03e;
+    opacity: 0.25;
+    animation-duration: 10.5s;
+  }
+
+  &.purple {
+    left: 15%;
+    background: #9340c5;
+    animation-duration: 8s;
+    animation-delay: -3s;
+  }
+
+  &.blue {
+    right: -10%;
+    background: #5991ff;
+    animation-duration: 12s;
+    animation-delay: -6s;
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(-8%, 10%) scale(1, 0.8) rotate(-6deg);
+  }
+
+  50% {
+    transform: translate(6%, -12%) scale(1.15, 1.1) rotate(4deg);
+  }
+
+  100% {
+    transform: translate(12%, 4%) scale(0.95, 0.9) rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow {
+    animation: none;
+  }
 }
 
 .landing {
@@ -66,12 +134,43 @@
   }
 }
 
-@media (max-width: 480px) {
-  .title {
-    font-size: 48px;
+// Phones, and short windows: everything a size smaller, with the logo
+// sized to the screen height, so the buttons fit on the first screen.
+@media (max-width: 480px), (max-height: 680px) {
+  .landing {
+    gap: 14px;
+    padding: 24px 20px;
   }
 
-  .actions ion-button {
-    flex: 1;
+  .logo {
+    width: min(180px, 24svh);
+  }
+
+  .title {
+    font-size: 40px;
+  }
+
+  .pitch {
+    gap: 8px;
+    font-size: 15px;
+    line-height: 1.4;
+
+    .lead {
+      font-size: 18px;
+    }
+  }
+
+  .actions {
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 360px;
+    margin-top: 4px;
+
+    // Down from Ionic's large size (20px).
+    ion-button {
+      flex: 1;
+      min-width: 0;
+      font-size: 16px;
+    }
   }
 }
