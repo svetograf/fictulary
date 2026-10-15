@@ -1,12 +1,21 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { Repository } from 'typeorm';
+import { User } from '../users/user.entity';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './public.decorator';
 
 describe('JwtAuthGuard', () => {
   const jwt = new JwtService({ secret: 'test-secret' });
-  const guard = new JwtAuthGuard(jwt, new Reflector());
+  const users = { existsBy: jest.fn() };
+  const guard = new JwtAuthGuard(
+    jwt,
+    new Reflector(),
+    users as unknown as Repository<User>,
+  );
+
+  beforeEach(() => users.existsBy.mockReset().mockResolvedValue(true));
 
   class Routes {
     protected() {
@@ -46,6 +55,18 @@ describe('JwtAuthGuard', () => {
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(request.user).toEqual({ id: 42, email: 'ada@example.com' });
+    expect(users.existsBy).toHaveBeenCalledWith({ id: 42 });
+  });
+
+  it('rejects valid tokens for deleted accounts', async () => {
+    users.existsBy.mockResolvedValue(false);
+    const token = await jwt.signAsync({ sub: '42', email: 'ada@example.com' });
+    const { context, request } = contextFor(`Bearer ${token}`);
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      new UnauthorizedException('Account not found'),
+    );
+    expect(request.user).toBeUndefined();
   });
 
   it.each([

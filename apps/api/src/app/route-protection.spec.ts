@@ -8,28 +8,36 @@ import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
+import { DevAuthController } from './auth/dev/dev-auth.controller';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { BooksController } from './books/books.controller';
 import { BooksService } from './books/books.service';
 import { DefinitionsService } from './dictionary/definitions.service';
 import { DictionaryController } from './dictionary/dictionary.controller';
 import { DictionaryService } from './dictionary/dictionary.service';
+import { User } from './users/user.entity';
 
 /** Every controller in the app. Add new controllers here. */
 const CONTROLLERS: Type[] = [
   AppController,
   AuthController,
+  DevAuthController,
   BooksController,
   DictionaryController,
 ];
 
 /** The only routes reachable without a token. */
-const PUBLIC_ROUTES = ['POST /api/sign-in', 'POST /api/sign-up'];
+const PUBLIC_ROUTES = [
+  'POST /api/auth/google',
+  'POST /api/auth/apple',
+  'POST /api/auth/dev',
+];
 
 interface Route {
   method: string;
@@ -76,13 +84,20 @@ describe('route protection', () => {
       controllers: CONTROLLERS,
       providers: [
         { provide: APP_GUARD, useClass: JwtAuthGuard },
+        {
+          provide: getRepositoryToken(User),
+          useValue: { existsBy: resolves(true) },
+        },
         { provide: AppService, useValue: { getData: jest.fn(() => ({})) } },
         {
           provide: AuthService,
           useValue: {
-            signUp: resolves({}),
-            signIn: resolves({}),
+            signInWithGoogle: resolves({}),
+            signInWithApple: resolves({}),
+            devSignIn: resolves({}),
             me: resolves({}),
+            updateProfile: resolves({}),
+            deleteAccount: resolves(undefined),
           },
         },
         {
