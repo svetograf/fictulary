@@ -165,6 +165,19 @@ describe('WordDialog', () => {
     expect(status()).toBe('Learning');
   });
 
+  it('capitalizes the word while it is a name', async () => {
+    const fixture = await render();
+    const title = () =>
+      (fixture.nativeElement as HTMLElement).querySelector('.title .word');
+    expect(title()?.classList).not.toContain('name');
+
+    store.dispatch(
+      new MarkWordViewedSuccess({ ...phone, status: WordStatus.NAME }),
+    );
+    await fixture.whenStable();
+    expect(title()?.classList).toContain('name');
+  });
+
   it('has only "Next" at the bottom', async () => {
     const fixture = await render();
     const buttons = [

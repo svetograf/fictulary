@@ -38,6 +38,11 @@ ion-toolbar {
 
 .word {
   overflow-wrap: anywhere;
+
+  // Names are stored lowercase like other words; show them as names.
+  &.name {
+    text-transform: capitalize;
+  }
 }
 
 .status {

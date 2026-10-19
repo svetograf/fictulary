@@ -213,6 +213,14 @@ describe('DictionaryPage', () => {
     );
   });
 
+  it('capitalizes names', async () => {
+    await harness.navigateByUrl('/my-dictionary?status=NAME', DictionaryPage);
+    await show([word('1', WordStatus.NAME)]);
+    expect(element().querySelector('.words .word')?.classList).toContain(
+      'name',
+    );
+  });
+
   it('marks words from the level word list with their level', async () => {
     await harness.navigateByUrl('/my-dictionary', DictionaryPage);
     await show([

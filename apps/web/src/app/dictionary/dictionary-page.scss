@@ -111,6 +111,11 @@
   white-space: nowrap;
 }
 
+// Names are stored lowercase like other words; show them as names.
+.word.name {
+  text-transform: capitalize;
+}
+
 // Words from the knowledge-level word list, in its secondary blue (as on
 // the book list), with their CEFR level first in the usage line.
 .word.from-level {

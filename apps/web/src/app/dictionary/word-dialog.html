@@ -2,7 +2,9 @@
   <ion-header>
     <ion-toolbar class="header">
       <h2 class="title">
-        <span class="word">{{ current.word }}</span>
+        <span class="word" [class.name]="current.status === name">{{
+          current.word
+        }}</span>
         <button
           type="button"
           class="status"

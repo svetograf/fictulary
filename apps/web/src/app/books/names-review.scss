@@ -70,6 +70,8 @@
   cursor: pointer;
   overflow-wrap: anywhere;
   text-align: left;
+  // Names are stored lowercase like other words; show them as names.
+  text-transform: capitalize;
 
   &:hover,
   &:focus-visible {

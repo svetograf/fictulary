@@ -102,6 +102,7 @@ export class WordDialog {
   protected readonly statuses = WORD_STATUSES;
   protected readonly setAside = SET_ASIDE_STATUSES;
   protected readonly learning = WordStatus.LEARNING;
+  protected readonly name = WordStatus.NAME;
 
   /**
    * "person, city" when the word is in the names list, whatever its status:

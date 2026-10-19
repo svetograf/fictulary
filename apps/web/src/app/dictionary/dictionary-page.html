@@ -58,6 +58,7 @@
               type="button"
               class="word"
               [class.from-level]="word.level"
+              [class.name]="word.status === name"
               (click)="open(word)"
               [attr.aria-label]="'Show details for ' + word.word"
             >
