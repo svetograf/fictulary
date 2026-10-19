@@ -17,6 +17,16 @@
   }
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  ion-button {
+    margin: 0;
+  }
+}
+
 .error {
   display: flex;
   align-items: center;
@@ -78,4 +88,15 @@
 
 .delete {
   --color: var(--ion-color-medium);
+}
+
+// The knowledge-level word list stands apart from books in the secondary
+// blue.
+.level {
+  border-left: 3px solid var(--ion-color-secondary);
+
+  .book ion-icon,
+  .title {
+    color: var(--ion-color-secondary);
+  }
 }

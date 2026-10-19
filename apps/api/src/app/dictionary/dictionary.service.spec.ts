@@ -1,4 +1,4 @@
-import { NameKind, WordStatus } from '@fictulary/shared/models';
+import { CefrLevel, NameKind, WordStatus } from '@fictulary/shared/models';
 import { NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { NamesService } from '../names/names.service';
@@ -11,6 +11,7 @@ describe('DictionaryService', () => {
     status: WordStatus.LEARNING,
     count: '42',
     bookCount: '2',
+    inLevelList: false,
   };
   const qb: Record<string, jest.Mock> = {};
   for (const method of [
@@ -30,10 +31,10 @@ describe('DictionaryService', () => {
   }
   qb.getRawOne = jest.fn();
   qb.getRawMany = jest.fn();
+  qb.getCount = jest.fn();
   const repo = {
     createQueryBuilder: jest.fn(() => qb),
     update: jest.fn(),
-    countBy: jest.fn(),
   };
   const namesService = { kindsOf: jest.fn() };
   const service = new DictionaryService(
@@ -45,7 +46,7 @@ describe('DictionaryService', () => {
 
   it('lists a page of words, converting counts to numbers', async () => {
     qb.getRawMany.mockResolvedValue([row]);
-    repo.countBy.mockResolvedValue(120);
+    qb.getCount.mockResolvedValue(120);
 
     await expect(service.list(5, WordStatus.LEARNING, 3, 50)).resolves.toEqual({
       items: [
@@ -55,6 +56,7 @@ describe('DictionaryService', () => {
           status: WordStatus.LEARNING,
           count: 42,
           bookCount: 2,
+          level: null,
         },
       ],
       total: 120,
@@ -64,12 +66,20 @@ describe('DictionaryService', () => {
     expect(qb.andWhere).toHaveBeenCalledWith('uw.status = :status', {
       status: WordStatus.LEARNING,
     });
-    expect(qb.orderBy).toHaveBeenCalledWith('SUM(bw.count)', 'DESC');
+    // Counts leave out knowledge-level word lists.
+    expect(qb.orderBy).toHaveBeenCalledWith(
+      'SUM(CASE WHEN b.level IS NULL THEN bw.count ELSE 0 END)',
+      'DESC',
+    );
     expect(qb.offset).toHaveBeenCalledWith(100);
     expect(qb.limit).toHaveBeenCalledWith(50);
-    expect(repo.countBy).toHaveBeenCalledWith({
+    // All words, including the level list's.
+    expect(qb.andWhere).not.toHaveBeenCalledWith(
+      expect.stringContaining('EXISTS'),
+    );
+    // The total counts the same words.
+    expect(qb.where).toHaveBeenCalledWith('uw.userId = :userId', {
       userId: 5,
-      status: WordStatus.LEARNING,
     });
   });
 
@@ -126,5 +136,50 @@ describe('DictionaryService', () => {
       nameKinds: [NameKind.PERSON, NameKind.CITY],
     });
     expect(namesService.kindsOf).toHaveBeenCalledWith('london');
+  });
+
+  it('can leave out the words of the level word list', async () => {
+    qb.getRawMany.mockResolvedValue([row]);
+    qb.getCount.mockResolvedValue(7);
+
+    await expect(
+      service.list(5, WordStatus.KNOWN, 1, 50, true),
+    ).resolves.toMatchObject({ total: 7 });
+
+    // On both the page and its total.
+    const filters = qb.andWhere.mock.calls.filter(
+      ([sql]) => typeof sql === 'string' && sql.includes('EXISTS'),
+    );
+    expect(filters).toHaveLength(2);
+    expect(filters[0][0]).toContain('NOT EXISTS');
+    expect(filters[0][0]).toContain('"level" IS NOT NULL');
+  });
+
+  it("gives words in the user's level list their own CEFR level", async () => {
+    // "phone" is A1 in CEFR-J, whatever level the list is.
+    qb.getRawOne.mockResolvedValue({ ...row, inLevelList: true });
+    qb.getRawMany.mockResolvedValue([]);
+
+    await expect(service.details(5, '12')).resolves.toMatchObject({
+      word: 'phone',
+      level: CefrLevel.A1,
+    });
+    expect(qb.addSelect).toHaveBeenCalledWith(
+      'BOOL_OR(b.level IS NOT NULL)',
+      'inLevelList',
+    );
+  });
+
+  it('leaves knowledge-level word lists out of the books a word is in', async () => {
+    qb.getRawOne.mockResolvedValue(row);
+    qb.getRawMany.mockResolvedValue([]);
+
+    await service.details(5, '12');
+
+    expect(qb.andWhere).toHaveBeenCalledWith('b.level IS NULL');
+    expect(qb.addSelect).toHaveBeenCalledWith(
+      'COUNT(bw.bookId) FILTER (WHERE b.level IS NULL)',
+      'bookCount',
+    );
   });
 });

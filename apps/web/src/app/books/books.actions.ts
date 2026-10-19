@@ -2,6 +2,7 @@ import {
   BookDetails,
   BookSummary,
   BookWordsPage,
+  CefrLevel,
   UploadedBook,
   WordCount,
   WordStatus,
@@ -116,6 +117,26 @@ export class DeleteBookFail {
     public readonly id: number,
     public readonly error: string,
   ) {}
+}
+
+/**
+ * Sets the user's knowledge level: their word list gets the CEFR-J words up
+ * to it. Null removes the list (or skips the level prompt).
+ */
+export class SetLevel {
+  static readonly type = '[Books] SET_LEVEL';
+  constructor(public readonly level: CefrLevel | null) {}
+}
+
+export class SetLevelSuccess {
+  static readonly type = '[Books] SET_LEVEL_SUCCESS';
+  /** The user's word list, or null when they have none now. */
+  constructor(public readonly list: BookSummary | null) {}
+}
+
+export class SetLevelFail {
+  static readonly type = '[Books] SET_LEVEL_FAIL';
+  constructor(public readonly error: string) {}
 }
 
 export class ResetUpload {

@@ -97,6 +97,12 @@
       "options": {
         "command": "node apps/api/tools/build-names-data.mjs"
       }
+    },
+    "build-cefr-data": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node apps/api/tools/build-cefr-data.mjs"
+      }
     }
   }
 }

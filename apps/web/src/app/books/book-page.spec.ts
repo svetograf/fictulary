@@ -32,6 +32,7 @@ const book: BookDetails = {
   wordCount: 10,
   uniqueWordCount: 2,
   createdAt: '2026-09-01T10:00:00.000Z',
+  level: null,
   words: [
     { wordId: '1', word: 'be', count: 6, status: WordStatus.LEARNING },
     { wordId: '2', word: 'cat', count: 4, status: WordStatus.UNKNOWN },

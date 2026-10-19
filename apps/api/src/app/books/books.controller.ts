@@ -17,6 +17,7 @@ import {
   ParseFilePipe,
   ParseIntPipe,
   Post,
+  Put,
   Query,
   UploadedFile,
   UseInterceptors,
@@ -28,6 +29,7 @@ import { BooksService } from './books.service';
 import { BookWordsPageQuery } from './dto/book-words-page.query';
 import { BookWordsQuery } from './dto/book-words.query';
 import { CreateBookDto } from './dto/create-book.dto';
+import { SetLevelDto } from './dto/set-level.dto';
 import { TextFileValidator } from './text-file.validator';
 
 @Controller()
@@ -60,6 +62,18 @@ export class BooksController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     return this.booksService.remove(user.id, id);
+  }
+
+  /**
+   * Sets the user's knowledge level: their "B1 vocabulary" word list gets
+   * the CEFR-J words up to that level as known words. Null removes the list.
+   */
+  @Put('level')
+  setLevel(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: SetLevelDto,
+  ): Promise<BookSummary | null> {
+    return this.booksService.setLevel(user.id, dto.level);
   }
 
   /** A page of the book's words to learn; the book carries the first 100. */

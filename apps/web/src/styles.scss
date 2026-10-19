@@ -142,19 +142,19 @@ ion-alert .alert-button-danger {
   }
 }
 
-// The sign-in dialog (see sign-in-dialog.ts): sized to its content, a
+// Small form dialogs (sign-in, knowledge level): sized to their content, a
 // centered card on wide screens and a bottom sheet on phones.
-ion-modal.sign-in-dialog,
-ion-modal.sign-in-sheet {
+ion-modal.form-dialog,
+ion-modal.form-sheet {
   --backdrop-opacity: 0.75;
 }
 
-ion-modal.sign-in-dialog {
+ion-modal.form-dialog {
   --width: 440px;
   --height: auto;
   --border-radius: 12px;
 }
 
-ion-modal.sign-in-sheet {
+ion-modal.form-sheet {
   --height: auto;
 }

@@ -10,7 +10,19 @@ import { DataSource, SelectQueryBuilder } from 'typeorm';
 import { NamesService } from '../names/names.service';
 import { BookWord } from '../books/entities/book-word.entity';
 import { Book } from '../books/entities/book.entity';
+import { wordLevel } from '../levels/level-words';
 import { UserWord } from './user-word.entity';
+
+/** Occurrences in uploaded books; knowledge-level word lists don't count. */
+const BOOK_COUNT = 'SUM(CASE WHEN b.level IS NULL THEN bw.count ELSE 0 END)';
+
+/** The user word `uw` is not in the user's knowledge-level word list. */
+const NOT_IN_LEVEL_LIST = `NOT EXISTS (
+  SELECT 1 FROM "book_words" lw
+  JOIN "books" lb ON lb."id" = lw."bookId"
+  WHERE lw."wordId" = uw."wordId" AND lb."userId" = uw."userId"
+    AND lb."level" IS NOT NULL
+)`;
 
 interface RawDictionaryWord {
   wordId: string;
@@ -18,6 +30,7 @@ interface RawDictionaryWord {
   status: WordStatus;
   count: string;
   bookCount: string;
+  inLevelList: boolean;
 }
 
 @Injectable()
@@ -27,22 +40,34 @@ export class DictionaryService {
     private readonly namesService: NamesService,
   ) {}
 
-  /** The user's words in one status, most used across their books first. */
+  /**
+   * The user's words in one status, most used across their books first.
+   * `bookWordsOnly` leaves out every word of their knowledge-level word
+   * list, even ones also found in books.
+   */
   async list(
     userId: number,
     status: WordStatus,
     page: number,
     pageSize: number,
+    bookWordsOnly = false,
   ): Promise<DictionaryPage> {
+    const filter = (qb: SelectQueryBuilder<UserWord>) =>
+      bookWordsOnly ? qb.andWhere(NOT_IN_LEVEL_LIST) : qb;
     const [rows, total] = await Promise.all([
-      this.entries(userId)
-        .andWhere('uw.status = :status', { status })
-        .orderBy('SUM(bw.count)', 'DESC')
+      filter(this.entries(userId).andWhere('uw.status = :status', { status }))
+        .orderBy(BOOK_COUNT, 'DESC')
         .addOrderBy('w.word', 'ASC')
         .offset((page - 1) * pageSize)
         .limit(pageSize)
         .getRawMany<RawDictionaryWord>(),
-      this.dataSource.getRepository(UserWord).countBy({ userId, status }),
+      filter(
+        this.dataSource
+          .getRepository(UserWord)
+          .createQueryBuilder('uw')
+          .where('uw.userId = :userId', { userId })
+          .andWhere('uw.status = :status', { status }),
+      ).getCount(),
     ]);
     return { items: rows.map(toDictionaryWord), total, page, pageSize };
   }
@@ -63,6 +88,8 @@ export class DictionaryService {
         .addSelect('bw.count', 'count')
         .where('bw.wordId = :wordId', { wordId })
         .andWhere('b.userId = :userId', { userId })
+        // Word lists aren't books the word is used in.
+        .andWhere('b.level IS NULL')
         .orderBy('bw.count', 'DESC')
         .addOrderBy('b.name', 'ASC')
         .getRawMany<{ bookId: number; name: string; count: string }>(),
@@ -117,7 +144,10 @@ export class DictionaryService {
     return toDictionaryWord(row);
   }
 
-  /** User words with their total count across the user's books. */
+  /**
+   * User words with their total count across the user's books. Every word is
+   * in at least one book or word list; word lists add nothing to the counts.
+   */
   private entries(userId: number): SelectQueryBuilder<UserWord> {
     return this.dataSource
       .getRepository(UserWord)
@@ -128,8 +158,9 @@ export class DictionaryService {
       .select('uw.wordId', 'wordId')
       .addSelect('w.word', 'word')
       .addSelect('uw.status', 'status')
-      .addSelect('SUM(bw.count)', 'count')
-      .addSelect('COUNT(bw.bookId)', 'bookCount')
+      .addSelect(BOOK_COUNT, 'count')
+      .addSelect('COUNT(bw.bookId) FILTER (WHERE b.level IS NULL)', 'bookCount')
+      .addSelect('BOOL_OR(b.level IS NOT NULL)', 'inLevelList')
       .where('uw.userId = :userId', { userId })
       .groupBy('uw.wordId')
       .addGroupBy('w.word')
@@ -145,6 +176,7 @@ function toDictionaryWord(row: RawDictionaryWord): DictionaryWord {
     status: row.status,
     count: Number(row.count),
     bookCount: Number(row.bookCount),
+    level: row.inLevelList ? wordLevel(row.word) : null,
   };
 }
 

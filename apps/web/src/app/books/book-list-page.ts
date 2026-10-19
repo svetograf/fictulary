@@ -18,6 +18,7 @@ import { Landing } from '../home/landing';
 import { BooksService } from './books.service';
 import { injectDeleteBook } from './delete-book';
 import { BooksState } from './books.state';
+import { injectLevelDialog } from './level-dialog';
 
 @Component({
   selector: 'app-book-list-page',
@@ -52,6 +53,8 @@ export class BookListPage implements ViewWillEnter {
   protected readonly deleteBook = injectDeleteBook();
   protected readonly loading = select(BooksState.booksLoading);
   protected readonly error = select(BooksState.booksError);
+  protected readonly levelList = select(BooksState.levelList);
+  protected readonly openLevel = injectLevelDialog();
 
   /** Ionic keeps this page alive under the pages opened from it. */
   private visited = false;

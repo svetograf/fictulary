@@ -22,6 +22,7 @@ import { Actions, ofActionSuccessful, select } from '@ngxs/store';
 import { filter } from 'rxjs';
 import { DeleteBookSuccess } from './books.actions';
 import { injectDeleteBook } from './delete-book';
+import { injectLevelDialog } from './level-dialog';
 import { BOOK_WORD_PAGE_SIZES, BookDetailsCard } from './book-details-card';
 import { BOOK_TOP_WORDS_LIMIT } from '@fictulary/shared/models';
 import { PageChange } from '../shared/paginator';
@@ -80,6 +81,7 @@ export class BookPage implements ViewWillEnter {
   });
   protected readonly deleting = select(BooksState.deletingIds);
   protected readonly deleteBook = injectDeleteBook();
+  protected readonly openLevel = injectLevelDialog();
 
   constructor() {
     // Load the page in the URL once the book is here. This reacts only to

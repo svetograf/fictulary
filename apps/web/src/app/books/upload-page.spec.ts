@@ -20,6 +20,7 @@ const uploaded: UploadedBook = {
   wordCount: 100,
   uniqueWordCount: 50,
   createdAt: '2026-10-01T10:00:00.000Z',
+  level: null,
   words: [{ wordId: '5', word: 'river', count: 3, status: WordStatus.UNKNOWN }],
   wordsToLearnCount: 0,
   markedAsNames: [],
@@ -127,6 +128,7 @@ describe('UploadPage (wizard)', () => {
       status,
       count: 3,
       bookCount: 1,
+      level: null,
     });
 
     // Opening an Unknown word marks it viewed (it becomes Learning), which

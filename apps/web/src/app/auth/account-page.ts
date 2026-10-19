@@ -11,8 +11,12 @@ import {
   NavController,
   ViewWillEnter,
 } from '@ionic/angular';
+import { CefrLevel } from '@fictulary/shared/models';
 import { Actions, ofActionDispatched, select } from '@ngxs/store';
 import { filter } from 'rxjs';
+import { BooksService } from '../books/books.service';
+import { BooksState } from '../books/books.state';
+import { LevelPicker } from '../books/level-picker';
 import { injectConfirm } from '../shared/confirm-dialog';
 import { injectToast } from '../shared/toast';
 import { DeleteAccountFail, SignOut } from './auth.actions';
@@ -31,6 +35,7 @@ import { NameForm } from './name-form';
     IonCardTitle,
     IonContent,
     IonSpinner,
+    LevelPicker,
     NameForm,
   ],
   templateUrl: './account-page.html',
@@ -39,6 +44,7 @@ import { NameForm } from './name-form';
 })
 export class AccountPage implements ViewWillEnter {
   protected readonly auth = inject(AuthService);
+  private readonly books = inject(BooksService);
   private readonly nav = inject(NavController);
   private readonly confirm = injectConfirm();
 
@@ -46,6 +52,9 @@ export class AccountPage implements ViewWillEnter {
   protected readonly submitting = select(AuthState.submitting);
   protected readonly deleting = select(AuthState.deleting);
   protected readonly error = select(AuthState.error);
+  protected readonly level = select(BooksState.level);
+  protected readonly levelSaving = select(BooksState.levelSaving);
+  protected readonly levelError = select(BooksState.levelError);
 
   constructor() {
     const toast = injectToast();
@@ -61,10 +70,35 @@ export class AccountPage implements ViewWillEnter {
     inject(DestroyRef).onDestroy(() =>
       subscriptions.forEach((subscription) => subscription.unsubscribe()),
     );
+    // The level is the user's word list, one of their books.
+    this.books.loadBooks();
   }
+
+  /** Ionic keeps this page alive under the pages opened from it. */
+  private visited = false;
 
   ionViewWillEnter(): void {
     this.auth.clearError();
+    if (this.visited) {
+      this.books.loadBooks();
+    }
+    this.visited = true;
+  }
+
+  protected chooseLevel(level: CefrLevel | null): void {
+    if (level) {
+      this.books.setLevel(level);
+      return;
+    }
+    this.confirm({
+      title: 'Remove your level?',
+      message:
+        'Its words that are in none of your books leave your dictionary, ' +
+        'together with their status. This cannot be undone.',
+      confirm: 'Remove',
+    })
+      .pipe(filter(Boolean))
+      .subscribe(() => this.books.setLevel(null));
   }
 
   protected deleteAccount(): void {

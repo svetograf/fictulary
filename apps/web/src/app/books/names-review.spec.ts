@@ -22,6 +22,7 @@ const book: UploadedBook = {
   wordCount: 100,
   uniqueWordCount: 50,
   createdAt: '2026-10-01T10:00:00.000Z',
+  level: null,
   words: [],
   wordsToLearnCount: 0,
   markedAsNames: ['tom', 'becky'],
@@ -120,6 +121,7 @@ describe('NamesReview', () => {
         status: WordStatus.UNKNOWN,
         count: 40,
         bookCount: 1,
+        level: null,
       }),
     );
     await fixture.whenStable();

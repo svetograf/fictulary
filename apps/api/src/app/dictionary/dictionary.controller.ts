@@ -45,6 +45,7 @@ export class DictionaryController {
       query.status,
       query.page,
       query.pageSize,
+      query.bookWordsOnly,
     );
   }
 

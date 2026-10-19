@@ -229,7 +229,7 @@ describe('injectSignInDialog', () => {
 
   it('opens a centered dialog on wide screens, with the data', async () => {
     const options = await open(true);
-    expect(options.cssClass).toBe('sign-in-dialog');
+    expect(options.cssClass).toBe('form-dialog');
     expect(options.breakpoints).toBeUndefined();
     expect(options.injector.get(SIGN_IN_DIALOG_DATA)).toEqual({
       mode: 'sign-up',
@@ -240,7 +240,7 @@ describe('injectSignInDialog', () => {
 
   it('opens a bottom sheet on phones', async () => {
     const options = await open(false);
-    expect(options.cssClass).toBe('sign-in-sheet');
+    expect(options.cssClass).toBe('form-sheet');
     expect(options.breakpoints).toEqual([0, 1]);
   });
 });

@@ -11,6 +11,7 @@ export const phone: DictionaryWord = {
   status: WordStatus.UNKNOWN,
   count: 42,
   bookCount: 2,
+  level: null,
 };
 
 export const phoneDetails: DictionaryWordDetails = {
@@ -70,4 +71,5 @@ export const word = (
   status,
   count: 10,
   bookCount: 1,
+  level: null,
 });

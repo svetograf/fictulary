@@ -9,6 +9,8 @@ export interface User {
   email: string;
   /** ISO 8601 timestamp. */
   createdAt: string;
+  /** Whether the user answered the knowledge level prompt (or skipped it). */
+  levelPrompted: boolean;
 }
 
 export enum AuthProvider {

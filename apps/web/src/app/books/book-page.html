@@ -11,16 +11,29 @@
         All books
       </ion-button>
       @if (book(); as current) {
-        <ion-button
-          fill="outline"
-          color="danger"
-          class="delete"
-          [disabled]="deleting().includes(current.id)"
-          (click)="deleteBook(current)"
-        >
-          <ion-icon slot="start" name="trash-outline" />
-          Delete book
-        </ion-button>
+        <div class="actions">
+          @if (current.level) {
+            <ion-button
+              fill="outline"
+              color="secondary"
+              class="change-level"
+              (click)="openLevel()"
+            >
+              <ion-icon slot="start" name="school-outline" />
+              Change level
+            </ion-button>
+          }
+          <ion-button
+            fill="outline"
+            color="danger"
+            class="delete"
+            [disabled]="deleting().includes(current.id)"
+            (click)="deleteBook(current)"
+          >
+            <ion-icon slot="start" name="trash-outline" />
+            {{ current.level ? 'Delete list' : 'Delete book' }}
+          </ion-button>
+        </div>
       }
     </div>
 

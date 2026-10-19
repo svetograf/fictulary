@@ -6,7 +6,7 @@ import {
   withComponentInputBinding,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { WordStatus } from '@fictulary/shared/models';
+import { CefrLevel, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import { LoadDictionarySuccess } from './dictionary.actions';
 import { DictionaryPage } from './dictionary-page';
@@ -68,6 +68,7 @@ describe('DictionaryPage', () => {
       status: WordStatus.KNOWN,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
   });
 
@@ -86,6 +87,7 @@ describe('DictionaryPage', () => {
       status: WordStatus.LEARNING,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
   });
 
@@ -98,6 +100,7 @@ describe('DictionaryPage', () => {
       status: WordStatus.LEARNING,
       page: 3,
       pageSize: 25,
+      bookWordsOnly: true,
     });
 
     await harness.navigateByUrl(
@@ -108,6 +111,7 @@ describe('DictionaryPage', () => {
       status: WordStatus.KNOWN,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
   });
 
@@ -144,7 +148,40 @@ describe('DictionaryPage', () => {
       status: WordStatus.UNKNOWN,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
+  });
+
+  it('shows book words only by default, toggled off through the URL', async () => {
+    await harness.navigateByUrl('/my-dictionary?page=3', DictionaryPage);
+    const toggle = element().querySelector<HTMLIonToggleElement>(
+      '.title-row ion-toggle',
+    );
+    expect(text(toggle)).toBe('Book words only');
+    expect(toggle?.checked).toBe(true);
+
+    toggle?.dispatchEvent(
+      new CustomEvent('ionChange', { detail: { checked: false } }),
+    );
+    await harness.fixture.whenStable();
+
+    // Back to page 1 of the longer list.
+    expect(TestBed.inject(Router).url).toBe(
+      '/my-dictionary?bookWordsOnly=false',
+    );
+    expect(dictionary.load).toHaveBeenLastCalledWith({
+      status: WordStatus.KNOWN,
+      page: 1,
+      pageSize: 50,
+      bookWordsOnly: false,
+    });
+    expect(toggle?.checked).toBe(false);
+
+    toggle?.dispatchEvent(
+      new CustomEvent('ionChange', { detail: { checked: true } }),
+    );
+    await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/my-dictionary');
   });
 
   it('lists words with usage and buttons for the two other statuses', async () => {
@@ -174,6 +211,23 @@ describe('DictionaryPage', () => {
       '1',
       WordStatus.LEARNING,
     );
+  });
+
+  it('marks words from the level word list with their level', async () => {
+    await harness.navigateByUrl('/my-dictionary', DictionaryPage);
+    await show([
+      { ...word('1'), count: 0, bookCount: 0, level: CefrLevel.A1 },
+      word('2'),
+    ]);
+
+    const [fromList, other] = element().querySelectorAll('.words li');
+    expect(fromList.querySelector('.word')?.classList).toContain('from-level');
+    expect(text(fromList.querySelector('.usage'))).toBe('A1 0 uses · 0 books');
+    expect(fromList.querySelector('.usage')?.firstElementChild?.className).toBe(
+      'level',
+    );
+    expect(other.querySelector('.word')?.classList).not.toContain('from-level');
+    expect(other.querySelector('.level')).toBeNull();
   });
 
   it('offers "I know" for words not known yet', async () => {
@@ -224,6 +278,7 @@ describe('DictionaryPage', () => {
       status,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
 
     await show([], 0);

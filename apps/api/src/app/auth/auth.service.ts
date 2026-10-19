@@ -243,6 +243,8 @@ function toUserDto(user: User): UserDto {
     name: user.name,
     email: user.email,
     createdAt: user.createdAt.toISOString(),
+    // Unset, not null, on a user just created.
+    levelPrompted: Boolean(user.levelPromptedAt),
   };
 }
 

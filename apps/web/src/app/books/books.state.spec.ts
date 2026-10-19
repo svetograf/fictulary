@@ -5,7 +5,12 @@ import {
 } from '@angular/common/http/testing';
 import { HttpEventType } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { BookDetails, BookSummary, WordStatus } from '@fictulary/shared/models';
+import {
+  BookDetails,
+  BookSummary,
+  CefrLevel,
+  WordStatus,
+} from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import {
   DeleteBook,
@@ -14,6 +19,7 @@ import {
   LoadBookNames,
   LoadBooks,
   ResetUpload,
+  SetLevel,
   UploadFile,
 } from './books.actions';
 import { SignOut } from '../auth/auth.actions';
@@ -30,6 +36,7 @@ const summary: BookSummary = {
   wordCount: 3,
   uniqueWordCount: 2,
   createdAt: '2026-09-01T10:00:00.000Z',
+  level: null,
 };
 
 const book: BookDetails = {
@@ -240,6 +247,7 @@ describe('BooksState', () => {
       status,
       count: 1,
       bookCount: 1,
+      level: null,
     });
 
     /** The shown page is reloaded after a word leaves it. */
@@ -409,6 +417,7 @@ describe('BooksState', () => {
           status: WordStatus.KNOWN,
           count: 2,
           bookCount: 1,
+          level: null,
         }),
       );
       expect(store.selectSnapshot(BooksState.currentWords).total).toBe(249);
@@ -466,6 +475,7 @@ describe('BooksState', () => {
           status: WordStatus.UNKNOWN,
           count: 40,
           bookCount: 1,
+          level: null,
         }),
       );
 
@@ -517,6 +527,71 @@ describe('BooksState', () => {
       expect(store.selectSnapshot(BooksState.books)).toHaveLength(2);
       expect(store.selectSnapshot(BooksState.currentBook)).toEqual(book);
       expect(store.selectSnapshot(BooksState.deletingIds)).toEqual([]);
+    });
+  });
+
+  describe('setting the level', () => {
+    const a2: BookSummary = {
+      ...summary,
+      id: 9,
+      name: 'A2 vocabulary',
+      level: CefrLevel.A2,
+    };
+    const loadList = (books: BookSummary[]) => {
+      store.dispatch(new LoadBooks());
+      http.expectOne('/api/books').flush(books);
+    };
+
+    it('adds a new word list to the top of the list', () => {
+      loadList([summary]);
+      store.dispatch(new SetLevel(CefrLevel.A2));
+      expect(store.selectSnapshot(BooksState.levelSaving)).toBe(true);
+
+      const req = http.expectOne('/api/level');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ level: CefrLevel.A2 });
+      req.flush(a2);
+
+      expect(store.selectSnapshot(BooksState.books)).toEqual([a2, summary]);
+      expect(store.selectSnapshot(BooksState.level)).toBe(CefrLevel.A2);
+      expect(store.selectSnapshot(BooksState.levelSaving)).toBe(false);
+    });
+
+    it('changes the list in place and reloads it when open', () => {
+      loadList([summary, a2]);
+      store.dispatch(new LoadBook(9));
+      http.expectOne('/api/book/9').flush({ ...book, ...a2 });
+
+      store.dispatch(new SetLevel(CefrLevel.B1));
+      const b1 = { ...a2, name: 'B1 vocabulary', level: CefrLevel.B1 };
+      http.expectOne('/api/level').flush(b1);
+
+      expect(store.selectSnapshot(BooksState.books)).toEqual([summary, b1]);
+      // Other words to learn now.
+      http.expectOne('/api/book/9').flush({ ...book, ...b1 });
+    });
+
+    it('drops the list when the level is removed', () => {
+      loadList([a2, summary]);
+      store.dispatch(new SetLevel(null));
+      const req = http.expectOne('/api/level');
+      expect(req.request.body).toEqual({ level: null });
+      req.flush(null);
+
+      expect(store.selectSnapshot(BooksState.books)).toEqual([summary]);
+      expect(store.selectSnapshot(BooksState.levelList)).toBeNull();
+    });
+
+    it('records the error on failure', () => {
+      store.dispatch(new SetLevel(CefrLevel.A1));
+      http
+        .expectOne('/api/level')
+        .flush(
+          { message: 'Server error' },
+          { status: 500, statusText: 'Server Error' },
+        );
+      expect(store.selectSnapshot(BooksState.levelError)).toBe('Server error');
+      expect(store.selectSnapshot(BooksState.levelSaving)).toBe(false);
     });
   });
 
