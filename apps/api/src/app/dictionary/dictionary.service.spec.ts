@@ -1,4 +1,4 @@
-import { NameKind, WordStatus } from '@fictulary/shared/models';
+import { CefrLevel, NameKind, WordStatus } from '@fictulary/shared/models';
 import { NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { NamesService } from '../names/names.service';
@@ -11,6 +11,7 @@ describe('DictionaryService', () => {
     status: WordStatus.LEARNING,
     count: '42',
     bookCount: '2',
+    inLevelList: false,
   };
   const qb: Record<string, jest.Mock> = {};
   for (const method of [
@@ -55,6 +56,7 @@ describe('DictionaryService', () => {
           status: WordStatus.LEARNING,
           count: 42,
           bookCount: 2,
+          level: null,
         },
       ],
       total: 120,
@@ -130,6 +132,21 @@ describe('DictionaryService', () => {
       nameKinds: [NameKind.PERSON, NameKind.CITY],
     });
     expect(namesService.kindsOf).toHaveBeenCalledWith('london');
+  });
+
+  it("gives words in the user's level list their own CEFR level", async () => {
+    // "phone" is A1 in CEFR-J, whatever level the list is.
+    qb.getRawOne.mockResolvedValue({ ...row, inLevelList: true });
+    qb.getRawMany.mockResolvedValue([]);
+
+    await expect(service.details(5, '12')).resolves.toMatchObject({
+      word: 'phone',
+      level: CefrLevel.A1,
+    });
+    expect(qb.addSelect).toHaveBeenCalledWith(
+      'BOOL_OR(b.level IS NOT NULL)',
+      'inLevelList',
+    );
   });
 
   it('leaves knowledge-level word lists out of the books a word is in', async () => {

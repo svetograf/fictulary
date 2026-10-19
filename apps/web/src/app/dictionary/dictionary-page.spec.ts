@@ -6,7 +6,7 @@ import {
   withComponentInputBinding,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { WordStatus } from '@fictulary/shared/models';
+import { CefrLevel, WordStatus } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import { LoadDictionarySuccess } from './dictionary.actions';
 import { DictionaryPage } from './dictionary-page';
@@ -174,6 +174,23 @@ describe('DictionaryPage', () => {
       '1',
       WordStatus.LEARNING,
     );
+  });
+
+  it('marks words from the level word list with their level', async () => {
+    await harness.navigateByUrl('/my-dictionary', DictionaryPage);
+    await show([
+      { ...word('1'), count: 0, bookCount: 0, level: CefrLevel.A1 },
+      word('2'),
+    ]);
+
+    const [fromList, other] = element().querySelectorAll('.words li');
+    expect(fromList.querySelector('.word')?.classList).toContain('from-level');
+    expect(text(fromList.querySelector('.usage'))).toBe('A1 0 uses · 0 books');
+    expect(fromList.querySelector('.usage')?.firstElementChild?.className).toBe(
+      'level',
+    );
+    expect(other.querySelector('.word')?.classList).not.toContain('from-level');
+    expect(other.querySelector('.level')).toBeNull();
   });
 
   it('offers "I know" for words not known yet', async () => {

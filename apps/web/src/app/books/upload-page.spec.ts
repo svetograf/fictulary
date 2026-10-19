@@ -128,6 +128,7 @@ describe('UploadPage (wizard)', () => {
       status,
       count: 3,
       bookCount: 1,
+      level: null,
     });
 
     // Opening an Unknown word marks it viewed (it becomes Learning), which

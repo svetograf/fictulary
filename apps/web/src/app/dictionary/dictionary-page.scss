@@ -94,6 +94,27 @@
   white-space: nowrap;
 }
 
+// Words from the knowledge-level word list, in its secondary blue (as on
+// the book list), with their CEFR level first in the usage line.
+.word.from-level {
+  color: var(--ion-color-secondary);
+
+  &:hover,
+  &:focus-visible {
+    background: color-mix(in srgb, var(--ion-color-secondary) 8%, transparent);
+  }
+}
+
+.level {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+  font-weight: 600;
+}
+
 .actions {
   display: flex;
   gap: 8px;
@@ -146,4 +167,3 @@
     display: none;
   }
 }
-

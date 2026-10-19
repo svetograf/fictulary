@@ -10,6 +10,7 @@ import { DataSource, SelectQueryBuilder } from 'typeorm';
 import { NamesService } from '../names/names.service';
 import { BookWord } from '../books/entities/book-word.entity';
 import { Book } from '../books/entities/book.entity';
+import { wordLevel } from '../levels/level-words';
 import { UserWord } from './user-word.entity';
 
 /** Occurrences in uploaded books; knowledge-level word lists don't count. */
@@ -21,6 +22,7 @@ interface RawDictionaryWord {
   status: WordStatus;
   count: string;
   bookCount: string;
+  inLevelList: boolean;
 }
 
 @Injectable()
@@ -138,6 +140,7 @@ export class DictionaryService {
       .addSelect('uw.status', 'status')
       .addSelect(BOOK_COUNT, 'count')
       .addSelect('COUNT(bw.bookId) FILTER (WHERE b.level IS NULL)', 'bookCount')
+      .addSelect('BOOL_OR(b.level IS NOT NULL)', 'inLevelList')
       .where('uw.userId = :userId', { userId })
       .groupBy('uw.wordId')
       .addGroupBy('w.word')
@@ -153,6 +156,7 @@ function toDictionaryWord(row: RawDictionaryWord): DictionaryWord {
     status: row.status,
     count: Number(row.count),
     bookCount: Number(row.bookCount),
+    level: row.inLevelList ? wordLevel(row.word) : null,
   };
 }
 

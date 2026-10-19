@@ -1,3 +1,5 @@
+import type { CefrLevel } from './book';
+
 /** How well a user knows a word, or why it isn't worth learning. */
 export enum WordStatus {
   KNOWN = 'KNOWN',
@@ -43,6 +45,11 @@ export interface DictionaryWord {
   count: number;
   /** Number of the user's books containing the word. */
   bookCount: number;
+  /**
+   * The word's CEFR-J level when it is in the user's knowledge-level word
+   * list (the lowest level it's listed at), null otherwise.
+   */
+  level: CefrLevel | null;
 }
 
 export interface DictionaryPage {

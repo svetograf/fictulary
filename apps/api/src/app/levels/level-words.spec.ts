@@ -1,5 +1,5 @@
 import { CefrLevel } from '@fictulary/shared/models';
-import { levelWords } from './level-words';
+import { levelWords, wordLevel } from './level-words';
 
 describe('levelWords', () => {
   it('includes the words of lower levels', () => {
@@ -24,5 +24,18 @@ describe('levelWords', () => {
     expect(b2.has('colour')).toBe(true);
     expect(b2.has('color')).toBe(true);
     expect([...b2].some((word) => word.includes(' '))).toBe(false);
+  });
+});
+
+describe('wordLevel', () => {
+  it('gives the lowest level a word is listed at', () => {
+    expect(wordLevel('house')).toBe(CefrLevel.A1);
+    expect(wordLevel('abandon')).toBe(CefrLevel.B1);
+    // "glasses" (A1) and "glass" share a base form.
+    expect(wordLevel('glass')).toBe(CefrLevel.A1);
+  });
+
+  it('is null for words not in the list', () => {
+    expect(wordLevel('zephyr')).toBeNull();
   });
 });

@@ -247,6 +247,7 @@ describe('BooksState', () => {
       status,
       count: 1,
       bookCount: 1,
+      level: null,
     });
 
     /** The shown page is reloaded after a word leaves it. */
@@ -416,6 +417,7 @@ describe('BooksState', () => {
           status: WordStatus.KNOWN,
           count: 2,
           bookCount: 1,
+          level: null,
         }),
       );
       expect(store.selectSnapshot(BooksState.currentWords).total).toBe(249);
@@ -473,6 +475,7 @@ describe('BooksState', () => {
           status: WordStatus.UNKNOWN,
           count: 40,
           bookCount: 1,
+          level: null,
         }),
       );
 

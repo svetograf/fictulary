@@ -48,12 +48,20 @@
             <button
               type="button"
               class="word"
+              [class.from-level]="word.level"
               (click)="open(word)"
               [attr.aria-label]="'Show details for ' + word.word"
             >
               {{ word.word }}
             </button>
             <span class="usage">
+              @if (word.level; as level) {
+                <span
+                  class="level"
+                  [title]="'CEFR level ' + level + ', from your word list'"
+                  >{{ level }}</span
+                >
+              }
               {{ word.count | number }}
               {{ word.count === 1 ? 'use' : 'uses' }} · {{ word.bookCount }}
               {{ word.bookCount === 1 ? 'book' : 'books' }}

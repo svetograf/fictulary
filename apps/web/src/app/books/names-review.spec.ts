@@ -121,6 +121,7 @@ describe('NamesReview', () => {
         status: WordStatus.UNKNOWN,
         count: 40,
         bookCount: 1,
+        level: null,
       }),
     );
     await fixture.whenStable();
