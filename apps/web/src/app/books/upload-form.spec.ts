@@ -75,12 +75,57 @@ describe('UploadForm', () => {
 
     file.setValue(txt('book.pdf'));
     expect(file.hasError('fileExtension')).toBe(true);
+    file.setValue(txt('book.zip'));
+    expect(file.hasError('fileExtension')).toBe(true);
 
     file.setValue(txt('book.txt', 1024 * 1024 + 1));
     expect(file.hasError('maxFileSize')).toBe(true);
 
     file.setValue(txt('book.txt', 1024 * 1024));
     expect(file.valid).toBe(true);
+  });
+
+  it('accepts bigger ebooks, whose text is what counts', () => {
+    const file = form.controls.file;
+    file.setValue(txt('book.epub', 1024 * 1024 + 1));
+    expect(file.hasError('maxFileSize')).toBe(false);
+    file.setValue(txt('book.fb2', 20 * 1024 * 1024 + 1));
+    expect(file.hasError('maxFileSize')).toBe(true);
+  });
+
+  describe('ebooks', () => {
+    const FB2 =
+      '<FictionBook><body><section><p>The cat sat.</p></section></body></FictionBook>';
+    const read = async () => {
+      await vi.waitFor(() =>
+        expect(form.controls.file.status).not.toBe('PENDING'),
+      );
+      await fixture.whenStable();
+    };
+
+    it('uploads the text of an ebook as a .txt file', async () => {
+      drop(new File([FB2], 'Cat Tales.fb2'));
+      expect(form.controls.name.value).toBe('Cat Tales');
+      element.querySelector('form')?.dispatchEvent(new Event('submit'));
+
+      await vi.waitFor(() => expect(books.upload).toHaveBeenCalledTimes(1));
+      const { file } = books.upload.mock.calls[0][0];
+      expect(file.name).toBe('Cat Tales.txt');
+      await expect(readText(file)).resolves.toBe('The cat sat.');
+    });
+
+    it('explains why a book cannot be read', async () => {
+      drop(new File(['not a zip'], 'broken.epub'));
+      await read();
+      expect(form.controls.file.hasError('unreadableBook')).toBe(true);
+      expect(element.querySelector('.file-error')?.textContent).toContain(
+        "This book can't be read",
+      );
+
+      element.querySelector('form')?.dispatchEvent(new Event('submit'));
+      await fixture.whenStable();
+      expect(books.upload).not.toHaveBeenCalled();
+    });
   });
 
   it('validates name and description lengths', () => {

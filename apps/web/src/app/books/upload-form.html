@@ -35,7 +35,7 @@
         class="drop-zone"
         role="button"
         tabindex="0"
-        aria-label="Choose a .txt file or drop it here"
+        aria-label="Choose a .txt, .epub, .fb2 or .fb2.zip file or drop it here"
         [class.dragging]="dragging()"
         [class.invalid]="controls.file.invalid && controls.file.touched"
         [class.disabled]="form.disabled"
@@ -46,10 +46,12 @@
         (dragleave)="dragging.set(false)"
         (drop)="onDrop($event)"
       >
+        <!-- .zip: pickers match only the last extension, so .fb2.zip books
+             need it; other ZIPs are rejected by the form. -->
         <input
           #fileInput
           type="file"
-          accept=".txt,text/plain"
+          accept=".txt,.epub,.fb2,.zip,text/plain,application/epub+zip"
           hidden
           [disabled]="form.disabled"
           (change)="onFileInput($event)"
@@ -57,9 +59,13 @@
         @if (controls.file.value; as selected) {
           <ion-icon name="document-text-outline" aria-hidden="true" />
           <span class="file-name">{{ selected.name }}</span>
-          <span class="file-size"
-            >{{ selected.size / 1024 | number: '1.0-1' }} KB</span
-          >
+          <span class="file-size">
+            @if (fileStatus() === 'PENDING') {
+              Reading the book…
+            } @else {
+              {{ selected.size / 1024 | number: '1.0-1' }} KB
+            }
+          </span>
           <ion-button
             fill="clear"
             shape="round"
@@ -73,22 +79,45 @@
           </ion-button>
         } @else {
           <ion-icon name="cloud-upload-outline" aria-hidden="true" />
-          <span>Drop a .txt file here or <strong>browse</strong></span>
-          <span class="file-size">Up to {{ limits.fileSizeMb }} MB</span>
+          <span>Drop a book here or <strong>browse</strong></span>
+          <span class="file-size"
+            >.txt, .epub, .fb2 or .fb2.zip, up to {{ limits.fileSizeMb }} MB of
+            text</span
+          >
         }
       </div>
-      @if (controls.file.touched) {
+      <!-- fileStatus() re-renders the errors once an ebook is read. -->
+      @if (controls.file.touched && fileStatus() !== 'PENDING') {
         @if (controls.file.hasError('required')) {
           <ion-note color="danger" class="file-error"
             >Please choose a file.</ion-note
           >
         } @else if (controls.file.hasError('fileExtension')) {
           <ion-note color="danger" class="file-error"
-            >Only .txt files are supported.</ion-note
+            >Only .txt, .epub, .fb2 and .fb2.zip files are supported.</ion-note
           >
-        } @else if (controls.file.hasError('maxFileSize')) {
+        } @else if (controls.file.getError('maxFileSize'); as error) {
           <ion-note color="danger" class="file-error"
-            >File must be {{ limits.fileSizeMb }} MB or smaller.</ion-note
+            >File must be {{ error.maxBytes / 1048576 }} MB or
+            smaller.</ion-note
+          >
+        } @else if (controls.file.hasError('protectedBook')) {
+          <ion-note color="danger" class="file-error"
+            >This book is DRM-protected and can't be read.</ion-note
+          >
+        } @else if (controls.file.hasError('unreadableBook')) {
+          <ion-note color="danger" class="file-error"
+            >This book can't be read; the file may be damaged.</ion-note
+          >
+        } @else if (controls.file.hasError('noText')) {
+          <ion-note color="danger" class="file-error"
+            >No text found in this book.</ion-note
+          >
+        } @else if (controls.file.getError('maxTextBytes'); as error) {
+          <ion-note color="danger" class="file-error"
+            >The book's text must be {{ limits.fileSizeMb }} MB or smaller (it
+            has
+            {{ error.actualBytes / 1048576 | number: '1.0-1' }} MB).</ion-note
           >
         }
       }

@@ -34,7 +34,16 @@ import {
   WordStatus,
 } from '@fictulary/shared/models';
 import { Actions, ofActionDispatched, select } from '@ngxs/store';
+import { filter, firstValueFrom } from 'rxjs';
 import { ResetUpload } from './books.actions';
+import {
+  BOOK_FILE_EXTENSIONS,
+  EBOOK_FILE_MAX_SIZE,
+  bookTextFile,
+  bookBaseName,
+  isEbook,
+  readableBook,
+} from './book-text';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 import { notBlank } from '../shared/validators';
@@ -47,7 +56,7 @@ import {
 
 type TextSource = 'file' | 'text';
 
-/** The backend accepts .txt uploads; pasted text is sent as one. */
+/** The backend accepts .txt uploads; pasted text and ebooks are sent as one. */
 const PASTED_FILE_NAME = 'pasted-text.txt';
 
 @Component({
@@ -88,11 +97,17 @@ export class UploadForm {
   protected readonly form = new FormGroup({
     /** Where the book's text comes from. */
     source: new FormControl<TextSource>('file', { nonNullable: true }),
-    file: new FormControl<File | null>(null, [
-      Validators.required,
-      fileExtension('.txt'),
-      maxFileSize(BOOK_FILE_MAX_SIZE),
-    ]),
+    file: new FormControl<File | null>(null, {
+      validators: [
+        Validators.required,
+        fileExtension(BOOK_FILE_EXTENSIONS),
+        maxFileSize((file) =>
+          isEbook(file) ? EBOOK_FILE_MAX_SIZE : BOOK_FILE_MAX_SIZE,
+        ),
+      ],
+      // Ebooks are read right away, so problems show before uploading.
+      asyncValidators: readableBook,
+    }),
     text: new FormControl('', {
       nonNullable: true,
       validators: [
@@ -125,6 +140,11 @@ export class UploadForm {
   /** The active source, also when set in code (e.g. on reset). */
   protected readonly source = toSignal(this.controls.source.valueChanges, {
     initialValue: this.controls.source.value,
+  });
+
+  /** The chosen file's status: PENDING while an ebook is being read. */
+  protected readonly fileStatus = toSignal(this.controls.file.statusChanges, {
+    initialValue: this.controls.file.status,
   });
 
   /** Pasted text size, as uploaded. */
@@ -184,7 +204,13 @@ export class UploadForm {
     this.setFile(null);
   }
 
-  protected submit(): void {
+  protected async submit(): Promise<void> {
+    if (this.form.pending) {
+      // An ebook is still being read; submit once it's done.
+      await firstValueFrom(
+        this.form.statusChanges.pipe(filter((status) => status !== 'PENDING')),
+      );
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -197,11 +223,13 @@ export class UploadForm {
       description,
       allKnown,
     } = this.form.getRawValue();
-    // Pasted text goes through the same upload as a .txt file.
+    // Pasted text and ebooks go through the same upload as a .txt file.
     const file =
       source === 'text'
         ? new File([text], PASTED_FILE_NAME, { type: 'text/plain' })
-        : chosen;
+        : chosen && isEbook(chosen)
+          ? await bookTextFile(chosen)
+          : chosen;
     if (file) {
       this.books.upload({
         file,
@@ -232,9 +260,7 @@ export class UploadForm {
     fileControl.markAsTouched();
     // Suggest the file name unless the user has typed a name themselves.
     if (file && !name.dirty) {
-      name.setValue(
-        file.name.replace(/\.[^.]+$/, '').slice(0, BOOK_NAME_MAX_LENGTH),
-      );
+      name.setValue(bookBaseName(file.name).slice(0, BOOK_NAME_MAX_LENGTH));
     }
   }
 }

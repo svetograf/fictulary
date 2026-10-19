@@ -1,19 +1,26 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
-export function maxFileSize(maxBytes: number): ValidatorFn {
+/** `limit` may depend on the file, e.g. its type. */
+export function maxFileSize(
+  limit: number | ((file: File) => number),
+): ValidatorFn {
   return (control: AbstractControl<File | null>): ValidationErrors | null => {
     const file = control.value;
-    return file && file.size > maxBytes
+    if (!file) {
+      return null;
+    }
+    const maxBytes = typeof limit === 'number' ? limit : limit(file);
+    return file.size > maxBytes
       ? { maxFileSize: { maxBytes, actualBytes: file.size } }
       : null;
   };
 }
 
-export function fileExtension(extension: string): ValidatorFn {
+export function fileExtension(extensions: string[]): ValidatorFn {
   return (control: AbstractControl<File | null>): ValidationErrors | null => {
-    const file = control.value;
-    return file && !file.name.toLowerCase().endsWith(extension)
-      ? { fileExtension: { extension } }
+    const name = control.value?.name.toLowerCase();
+    return name && !extensions.some((extension) => name.endsWith(extension))
+      ? { fileExtension: { extensions } }
       : null;
   };
 }
