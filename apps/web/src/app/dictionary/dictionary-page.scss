@@ -17,6 +17,23 @@
   }
 }
 
+// The title, with the "Book words only" toggle at the right end.
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  // Takes the header's whole first line, so the filter goes below it.
+  flex-basis: 100%;
+}
+
+.book-words-only {
+  --track-background-checked: var(--ion-color-secondary);
+  color: var(--ion-color-medium);
+  font-size: 14px;
+}
+
 .filter {
   width: auto;
 

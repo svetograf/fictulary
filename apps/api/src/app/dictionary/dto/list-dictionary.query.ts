@@ -3,8 +3,15 @@ import {
   DICTIONARY_MAX_PAGE_SIZE,
   WordStatus,
 } from '@fictulary/shared/models';
-import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ListDictionaryQuery {
   @IsOptional()
@@ -24,4 +31,16 @@ export class ListDictionaryQuery {
   @Min(1)
   @Max(DICTIONARY_MAX_PAGE_SIZE)
   pageSize = DICTIONARY_DEFAULT_PAGE_SIZE;
+
+  /**
+   * Leaves out every word of the user's knowledge-level word list, even
+   * ones also found in their books.
+   */
+  @IsOptional()
+  // Query values are strings; anything but "true"/"false" fails IsBoolean.
+  @Transform(({ value }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  bookWordsOnly = false;
 }

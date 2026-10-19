@@ -68,6 +68,7 @@ describe('DictionaryPage', () => {
       status: WordStatus.KNOWN,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
   });
 
@@ -86,6 +87,7 @@ describe('DictionaryPage', () => {
       status: WordStatus.LEARNING,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
   });
 
@@ -98,6 +100,7 @@ describe('DictionaryPage', () => {
       status: WordStatus.LEARNING,
       page: 3,
       pageSize: 25,
+      bookWordsOnly: true,
     });
 
     await harness.navigateByUrl(
@@ -108,6 +111,7 @@ describe('DictionaryPage', () => {
       status: WordStatus.KNOWN,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
   });
 
@@ -144,7 +148,40 @@ describe('DictionaryPage', () => {
       status: WordStatus.UNKNOWN,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
+  });
+
+  it('shows book words only by default, toggled off through the URL', async () => {
+    await harness.navigateByUrl('/my-dictionary?page=3', DictionaryPage);
+    const toggle = element().querySelector<HTMLIonToggleElement>(
+      '.title-row ion-toggle',
+    );
+    expect(text(toggle)).toBe('Book words only');
+    expect(toggle?.checked).toBe(true);
+
+    toggle?.dispatchEvent(
+      new CustomEvent('ionChange', { detail: { checked: false } }),
+    );
+    await harness.fixture.whenStable();
+
+    // Back to page 1 of the longer list.
+    expect(TestBed.inject(Router).url).toBe(
+      '/my-dictionary?bookWordsOnly=false',
+    );
+    expect(dictionary.load).toHaveBeenLastCalledWith({
+      status: WordStatus.KNOWN,
+      page: 1,
+      pageSize: 50,
+      bookWordsOnly: false,
+    });
+    expect(toggle?.checked).toBe(false);
+
+    toggle?.dispatchEvent(
+      new CustomEvent('ionChange', { detail: { checked: true } }),
+    );
+    await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/my-dictionary');
   });
 
   it('lists words with usage and buttons for the two other statuses', async () => {
@@ -241,6 +278,7 @@ describe('DictionaryPage', () => {
       status,
       page: 1,
       pageSize: 50,
+      bookWordsOnly: true,
     });
 
     await show([], 0);

@@ -20,7 +20,12 @@ import { phone, phoneDefinition, phoneDetails, word } from './testing';
 describe('DictionaryState', () => {
   let store: Store;
   let http: HttpTestingController;
-  const known = { status: WordStatus.KNOWN, page: 1, pageSize: 2 };
+  const known = {
+    status: WordStatus.KNOWN,
+    page: 1,
+    pageSize: 2,
+    bookWordsOnly: true,
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -50,6 +55,7 @@ describe('DictionaryState', () => {
         status: WordStatus.LEARNING,
         page: 3,
         pageSize: 25,
+        bookWordsOnly: false,
       }),
     );
     expect(store.selectSnapshot(DictionaryState.loading)).toBe(true);
@@ -58,6 +64,7 @@ describe('DictionaryState', () => {
     expect(req.request.params.get('status')).toBe('LEARNING');
     expect(req.request.params.get('page')).toBe('3');
     expect(req.request.params.get('pageSize')).toBe('25');
+    expect(req.request.params.get('bookWordsOnly')).toBe('false');
     req.flush({
       items: [word('1', WordStatus.LEARNING)],
       total: 51,

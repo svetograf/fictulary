@@ -1,7 +1,16 @@
 <ion-content>
   <div class="page-content">
     <header class="page-header">
-      <h2>My dictionary</h2>
+      <div class="title-row">
+        <h2>My dictionary</h2>
+        <ion-toggle
+          class="book-words-only"
+          [checked]="query().bookWordsOnly"
+          (ionChange)="setBookWordsOnly($event.detail.checked)"
+        >
+          Book words only
+        </ion-toggle>
+      </div>
       <ion-segment
         class="filter"
         [value]="query().status"

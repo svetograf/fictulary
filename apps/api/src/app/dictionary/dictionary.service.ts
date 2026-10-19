@@ -16,6 +16,14 @@ import { UserWord } from './user-word.entity';
 /** Occurrences in uploaded books; knowledge-level word lists don't count. */
 const BOOK_COUNT = 'SUM(CASE WHEN b.level IS NULL THEN bw.count ELSE 0 END)';
 
+/** The user word `uw` is not in the user's knowledge-level word list. */
+const NOT_IN_LEVEL_LIST = `NOT EXISTS (
+  SELECT 1 FROM "book_words" lw
+  JOIN "books" lb ON lb."id" = lw."bookId"
+  WHERE lw."wordId" = uw."wordId" AND lb."userId" = uw."userId"
+    AND lb."level" IS NOT NULL
+)`;
+
 interface RawDictionaryWord {
   wordId: string;
   word: string;
@@ -32,22 +40,34 @@ export class DictionaryService {
     private readonly namesService: NamesService,
   ) {}
 
-  /** The user's words in one status, most used across their books first. */
+  /**
+   * The user's words in one status, most used across their books first.
+   * `bookWordsOnly` leaves out every word of their knowledge-level word
+   * list, even ones also found in books.
+   */
   async list(
     userId: number,
     status: WordStatus,
     page: number,
     pageSize: number,
+    bookWordsOnly = false,
   ): Promise<DictionaryPage> {
+    const filter = (qb: SelectQueryBuilder<UserWord>) =>
+      bookWordsOnly ? qb.andWhere(NOT_IN_LEVEL_LIST) : qb;
     const [rows, total] = await Promise.all([
-      this.entries(userId)
-        .andWhere('uw.status = :status', { status })
+      filter(this.entries(userId).andWhere('uw.status = :status', { status }))
         .orderBy(BOOK_COUNT, 'DESC')
         .addOrderBy('w.word', 'ASC')
         .offset((page - 1) * pageSize)
         .limit(pageSize)
         .getRawMany<RawDictionaryWord>(),
-      this.dataSource.getRepository(UserWord).countBy({ userId, status }),
+      filter(
+        this.dataSource
+          .getRepository(UserWord)
+          .createQueryBuilder('uw')
+          .where('uw.userId = :userId', { userId })
+          .andWhere('uw.status = :status', { status }),
+      ).getCount(),
     ]);
     return { items: rows.map(toDictionaryWord), total, page, pageSize };
   }

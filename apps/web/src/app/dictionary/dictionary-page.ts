@@ -17,6 +17,7 @@ import {
   IonRouterLink,
   IonSegment,
   IonSegmentButton,
+  IonToggle,
   SegmentValue,
   ViewWillEnter,
 } from '@ionic/angular';
@@ -76,6 +77,7 @@ const EMPTY_MESSAGES: Record<WordStatus, string> = {
     IonRouterLink,
     IonSegment,
     IonSegmentButton,
+    IonToggle,
     DecimalPipe,
     RouterLink,
     Paginator,
@@ -95,6 +97,8 @@ export class DictionaryPage implements ViewWillEnter {
   readonly status = input<string>();
   readonly page = input<string>();
   readonly pageSize = input<string>();
+  /** On unless "false". */
+  readonly bookWordsOnly = input<string>();
 
   protected readonly query = computed<DictionaryQuery>(() => {
     const status = this.status() as WordStatus;
@@ -106,6 +110,7 @@ export class DictionaryPage implements ViewWillEnter {
       pageSize: PAGE_SIZES.includes(pageSize)
         ? pageSize
         : DICTIONARY_DEFAULT_PAGE_SIZE,
+      bookWordsOnly: this.bookWordsOnly() !== 'false',
     };
   });
 
@@ -150,6 +155,11 @@ export class DictionaryPage implements ViewWillEnter {
   /** A status picked in the filter; `query` checks it is one. */
   protected setStatus(status: SegmentValue | undefined): void {
     this.navigate({ status: status ?? null, page: null });
+  }
+
+  /** Off is kept in the URL; on is the default, so it leaves no trace. */
+  protected setBookWordsOnly(on: boolean): void {
+    this.navigate({ bookWordsOnly: on ? null : 'false', page: null });
   }
 
   protected changePage({ page, pageSize }: PageChange): void {

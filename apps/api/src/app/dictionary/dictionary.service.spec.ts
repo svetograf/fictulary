@@ -31,10 +31,10 @@ describe('DictionaryService', () => {
   }
   qb.getRawOne = jest.fn();
   qb.getRawMany = jest.fn();
+  qb.getCount = jest.fn();
   const repo = {
     createQueryBuilder: jest.fn(() => qb),
     update: jest.fn(),
-    countBy: jest.fn(),
   };
   const namesService = { kindsOf: jest.fn() };
   const service = new DictionaryService(
@@ -46,7 +46,7 @@ describe('DictionaryService', () => {
 
   it('lists a page of words, converting counts to numbers', async () => {
     qb.getRawMany.mockResolvedValue([row]);
-    repo.countBy.mockResolvedValue(120);
+    qb.getCount.mockResolvedValue(120);
 
     await expect(service.list(5, WordStatus.LEARNING, 3, 50)).resolves.toEqual({
       items: [
@@ -73,9 +73,13 @@ describe('DictionaryService', () => {
     );
     expect(qb.offset).toHaveBeenCalledWith(100);
     expect(qb.limit).toHaveBeenCalledWith(50);
-    expect(repo.countBy).toHaveBeenCalledWith({
+    // All words, including the level list's.
+    expect(qb.andWhere).not.toHaveBeenCalledWith(
+      expect.stringContaining('EXISTS'),
+    );
+    // The total counts the same words.
+    expect(qb.where).toHaveBeenCalledWith('uw.userId = :userId', {
       userId: 5,
-      status: WordStatus.LEARNING,
     });
   });
 
@@ -132,6 +136,23 @@ describe('DictionaryService', () => {
       nameKinds: [NameKind.PERSON, NameKind.CITY],
     });
     expect(namesService.kindsOf).toHaveBeenCalledWith('london');
+  });
+
+  it('can leave out the words of the level word list', async () => {
+    qb.getRawMany.mockResolvedValue([row]);
+    qb.getCount.mockResolvedValue(7);
+
+    await expect(
+      service.list(5, WordStatus.KNOWN, 1, 50, true),
+    ).resolves.toMatchObject({ total: 7 });
+
+    // On both the page and its total.
+    const filters = qb.andWhere.mock.calls.filter(
+      ([sql]) => typeof sql === 'string' && sql.includes('EXISTS'),
+    );
+    expect(filters).toHaveLength(2);
+    expect(filters[0][0]).toContain('NOT EXISTS');
+    expect(filters[0][0]).toContain('"level" IS NOT NULL');
   });
 
   it("gives words in the user's level list their own CEFR level", async () => {

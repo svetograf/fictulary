@@ -14,6 +14,8 @@ export interface DictionaryQuery {
   /** 1-based. */
   page: number;
   pageSize: number;
+  /** Leave out the words of the knowledge-level word list. */
+  bookWordsOnly: boolean;
 }
 
 export class LoadDictionary {

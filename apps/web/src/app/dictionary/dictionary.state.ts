@@ -77,6 +77,7 @@ const defaults: DictionaryStateModel = {
     status: WordStatus.KNOWN,
     page: 1,
     pageSize: DICTIONARY_DEFAULT_PAGE_SIZE,
+    bookWordsOnly: true,
   },
   items: [],
   total: 0,
@@ -164,11 +165,13 @@ export class DictionaryState {
 
   @Action(LoadDictionary, { cancelUncompleted: true })
   loadDictionary(ctx: Ctx, { query }: LoadDictionary) {
+    const shown = ctx.getState().query;
     const sameList =
-      ctx.getState().query.status === query.status &&
-      ctx.getState().query.pageSize === query.pageSize;
+      shown.status === query.status &&
+      shown.pageSize === query.pageSize &&
+      shown.bookWordsOnly === query.bookWordsOnly;
     // Keep the current rows while refreshing the same list; clear them when
-    // switching status so the old list doesn't flash under the new filter.
+    // switching filters so the old list doesn't flash under the new one.
     ctx.patchState({
       query,
       loading: true,
@@ -180,6 +183,7 @@ export class DictionaryState {
         status: query.status,
         page: query.page,
         pageSize: query.pageSize,
+        bookWordsOnly: query.bookWordsOnly,
       },
     });
     return this.http.get<DictionaryPage>('/api/my-dictionary', { params }).pipe(
