@@ -12,6 +12,9 @@ import { BookWord } from '../books/entities/book-word.entity';
 import { Book } from '../books/entities/book.entity';
 import { UserWord } from './user-word.entity';
 
+/** Occurrences in uploaded books; knowledge-level word lists don't count. */
+const BOOK_COUNT = 'SUM(CASE WHEN b.level IS NULL THEN bw.count ELSE 0 END)';
+
 interface RawDictionaryWord {
   wordId: string;
   word: string;
@@ -37,7 +40,7 @@ export class DictionaryService {
     const [rows, total] = await Promise.all([
       this.entries(userId)
         .andWhere('uw.status = :status', { status })
-        .orderBy('SUM(bw.count)', 'DESC')
+        .orderBy(BOOK_COUNT, 'DESC')
         .addOrderBy('w.word', 'ASC')
         .offset((page - 1) * pageSize)
         .limit(pageSize)
@@ -63,6 +66,8 @@ export class DictionaryService {
         .addSelect('bw.count', 'count')
         .where('bw.wordId = :wordId', { wordId })
         .andWhere('b.userId = :userId', { userId })
+        // Word lists aren't books the word is used in.
+        .andWhere('b.level IS NULL')
         .orderBy('bw.count', 'DESC')
         .addOrderBy('b.name', 'ASC')
         .getRawMany<{ bookId: number; name: string; count: string }>(),
@@ -117,7 +122,10 @@ export class DictionaryService {
     return toDictionaryWord(row);
   }
 
-  /** User words with their total count across the user's books. */
+  /**
+   * User words with their total count across the user's books. Every word is
+   * in at least one book or word list; word lists add nothing to the counts.
+   */
   private entries(userId: number): SelectQueryBuilder<UserWord> {
     return this.dataSource
       .getRepository(UserWord)
@@ -128,8 +136,8 @@ export class DictionaryService {
       .select('uw.wordId', 'wordId')
       .addSelect('w.word', 'word')
       .addSelect('uw.status', 'status')
-      .addSelect('SUM(bw.count)', 'count')
-      .addSelect('COUNT(bw.bookId)', 'bookCount')
+      .addSelect(BOOK_COUNT, 'count')
+      .addSelect('COUNT(bw.bookId) FILTER (WHERE b.level IS NULL)', 'bookCount')
       .where('uw.userId = :userId', { userId })
       .groupBy('uw.wordId')
       .addGroupBy('w.word')

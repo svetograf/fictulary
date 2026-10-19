@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { AuthResponse, User } from '@fictulary/shared/models';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
 import { Observable, catchError, defer, mergeMap } from 'rxjs';
+import { SetLevelSuccess } from '../books/books.actions';
 import { httpErrorMessage } from '../shared/http-error-message';
 import {
   ClearAuthError,
@@ -85,6 +86,18 @@ export class AuthState {
   @Selector()
   static needsName(state: AuthStateModel): boolean {
     return state.user !== null && !state.user.name;
+  }
+
+  /** Signed in with a loaded profile that never answered the level prompt. */
+  @Selector()
+  static needsLevel(state: AuthStateModel): boolean {
+    return state.user !== null && !state.user.levelPrompted;
+  }
+
+  /** Has steps of the welcome page left: a name or the knowledge level. */
+  @Selector([AuthState.needsName, AuthState.needsLevel])
+  static needsOnboarding(needsName: boolean, needsLevel: boolean): boolean {
+    return needsName || needsLevel;
   }
 
   @Selector()
@@ -176,6 +189,15 @@ export class AuthState {
   @Action(UpdateProfileFail)
   updateProfileFail(ctx: Ctx, { error }: UpdateProfileFail) {
     ctx.patchState({ submitting: false, error });
+  }
+
+  /** Setting a level, or skipping it, answers the level prompt. */
+  @Action(SetLevelSuccess)
+  setLevelSuccess(ctx: Ctx) {
+    const { user } = ctx.getState();
+    if (user && !user.levelPrompted) {
+      ctx.patchState({ user: { ...user, levelPrompted: true } });
+    }
   }
 
   @Action(DeleteAccount, { cancelUncompleted: true })

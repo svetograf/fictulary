@@ -132,6 +132,7 @@ describe('AuthService', () => {
         name: 'Ada Lovelace',
         email: 'ada@example.com',
         createdAt: createdAt.toISOString(),
+        levelPrompted: false,
       });
       expect(identities.rows).toEqual([
         expect.objectContaining({

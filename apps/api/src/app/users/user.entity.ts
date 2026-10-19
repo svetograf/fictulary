@@ -24,4 +24,8 @@ export class User {
   /** Stored lowercased, so uniqueness is case-insensitive. */
   @Column({ length: USER_EMAIL_MAX_LENGTH, unique: true })
   email!: string;
+
+  /** When the user answered the knowledge level prompt; null until then. */
+  @Column({ type: 'timestamptz', nullable: true })
+  levelPromptedAt!: Date | null;
 }

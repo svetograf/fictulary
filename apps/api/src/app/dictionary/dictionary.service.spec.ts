@@ -64,7 +64,11 @@ describe('DictionaryService', () => {
     expect(qb.andWhere).toHaveBeenCalledWith('uw.status = :status', {
       status: WordStatus.LEARNING,
     });
-    expect(qb.orderBy).toHaveBeenCalledWith('SUM(bw.count)', 'DESC');
+    // Counts leave out knowledge-level word lists.
+    expect(qb.orderBy).toHaveBeenCalledWith(
+      'SUM(CASE WHEN b.level IS NULL THEN bw.count ELSE 0 END)',
+      'DESC',
+    );
     expect(qb.offset).toHaveBeenCalledWith(100);
     expect(qb.limit).toHaveBeenCalledWith(50);
     expect(repo.countBy).toHaveBeenCalledWith({
@@ -126,5 +130,18 @@ describe('DictionaryService', () => {
       nameKinds: [NameKind.PERSON, NameKind.CITY],
     });
     expect(namesService.kindsOf).toHaveBeenCalledWith('london');
+  });
+
+  it('leaves knowledge-level word lists out of the books a word is in', async () => {
+    qb.getRawOne.mockResolvedValue(row);
+    qb.getRawMany.mockResolvedValue([]);
+
+    await service.details(5, '12');
+
+    expect(qb.andWhere).toHaveBeenCalledWith('b.level IS NULL');
+    expect(qb.addSelect).toHaveBeenCalledWith(
+      'COUNT(bw.bookId) FILTER (WHERE b.level IS NULL)',
+      'bookCount',
+    );
   });
 });

@@ -1,4 +1,4 @@
-import { WordStatus } from '@fictulary/shared/models';
+import { CefrLevel, WordStatus } from '@fictulary/shared/models';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager, FindOperator } from 'typeorm';
 import { BooksService } from './books.service';
@@ -7,6 +7,12 @@ import { UserWord } from '../dictionary/user-word.entity';
 import { NamesService } from '../names/names.service';
 import { Book } from './entities/book.entity';
 import { Word } from './entities/word.entity';
+import { User } from '../users/user.entity';
+
+jest.mock('../levels/level-words', () => ({
+  levelWords: (level: string) =>
+    new Set(level === 'A1' ? ['cat', 'dog'] : ['cat', 'dog', 'horse']),
+}));
 
 describe('BooksService', () => {
   const createdAt = new Date('2026-09-01T10:00:00.000Z');
@@ -18,6 +24,9 @@ describe('BooksService', () => {
     orIgnore: jest.fn().mockReturnThis(),
     orUpdate: jest.fn().mockReturnThis(),
     returning: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    set: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
     execute: jest.fn(async (): Promise<{ raw: { wordId: string }[] }> => ({
       raw: [],
     })),
@@ -115,6 +124,7 @@ describe('BooksService', () => {
         wordCount: 7,
         uniqueWordCount: 5,
         createdAt: '2026-09-01T10:00:00.000Z',
+        level: null,
         // Read back from the user's dictionary after saving.
         words: [
           { wordId: '1', word: 'be', count: 2, status: WordStatus.LEARNING },
@@ -300,6 +310,7 @@ describe('BooksService', () => {
       await expect(service.findOne(userId, 3)).resolves.toEqual({
         ...book,
         createdAt: '2026-09-01T10:00:00.000Z',
+        level: null,
         uniqueWordCount: 2,
         words: [
           { wordId: '1', word: 'be', count: 6, status: WordStatus.LEARNING },
@@ -465,18 +476,126 @@ describe('BooksService', () => {
           ...summary,
           uniqueWordCount: 4,
           createdAt: '2026-09-01T10:00:00.000Z',
+          level: null,
         },
         {
           id: 1,
           ...summary,
           uniqueWordCount: 0,
           createdAt: '2026-09-01T10:00:00.000Z',
+          level: null,
         },
       ]);
       expect(bookRepo.find).toHaveBeenCalledWith({
         where: { userId: 5 },
         order: { createdAt: 'DESC', id: 'DESC' },
       });
+    });
+  });
+
+  describe('setLevel', () => {
+    const list = {
+      id: 9,
+      name: 'B1 vocabulary',
+      description: null,
+      wordCount: 3,
+      userId: 5,
+      level: CefrLevel.B1,
+      createdAt,
+    };
+
+    it('creates the word list with the words up to the level as KNOWN', async () => {
+      manager.findOneBy.mockResolvedValue(null);
+
+      const result = await service.setLevel(userId, CefrLevel.A1);
+
+      expect(result).toEqual({
+        id: 7,
+        name: 'A1 vocabulary',
+        description: null,
+        wordCount: 2,
+        uniqueWordCount: 2,
+        createdAt: '2026-09-01T10:00:00.000Z',
+        level: CefrLevel.A1,
+      });
+      // The prompt is answered, once.
+      expect(insertBuilder.update).toHaveBeenCalledWith(User);
+      expect(insertBuilder.set).toHaveBeenCalledWith({
+        levelPromptedAt: expect.any(Function),
+      });
+      expect(manager.insert).toHaveBeenCalledWith(BookWord, [
+        { bookId: 7, wordId: 'cat#', count: 1 },
+        { bookId: 7, wordId: 'dog#', count: 1 },
+      ]);
+      expect(insertBuilder.values).toHaveBeenCalledWith([
+        { userId: 5, wordId: 'cat#', status: WordStatus.KNOWN },
+        { userId: 5, wordId: 'dog#', status: WordStatus.KNOWN },
+      ]);
+      // Upgrades words to learn only, like a book that was read.
+      expect(insertBuilder.orUpdate).toHaveBeenCalled();
+      // A word list has no names.
+      expect(namesService.findNames).not.toHaveBeenCalled();
+    });
+
+    it('changes an existing list in place, keeping the statuses of words that stay', async () => {
+      manager.findOneBy.mockResolvedValue({ ...list });
+      const current = queryBuilder([
+        { wordId: '1', word: 'cat' },
+        { wordId: '3', word: 'horse' },
+      ]);
+      manager.createQueryBuilder.mockImplementation(((entity?: unknown) =>
+        entity === BookWord
+          ? current
+          : insertBuilder) as unknown as () => typeof insertBuilder);
+
+      const result = await service.setLevel(userId, CefrLevel.A1);
+
+      // "horse" leaves, like a deleted book's word...
+      const [userWords, words] = manager.query.mock.calls;
+      expect(userWords[0]).toContain('DELETE FROM "user_words"');
+      expect(userWords[0]).toContain('ANY($3::bigint[])');
+      expect(userWords[1]).toEqual([9, 5, ['3']]);
+      expect(words[0]).toContain('ANY($2::bigint[])');
+      expect(words[1]).toEqual([9, ['3']]);
+      expect(manager.delete).toHaveBeenCalledWith(BookWord, {
+        bookId: 9,
+        wordId: expect.objectContaining({ _value: ['3'] }),
+      });
+      // ...only "dog" is new; "cat" keeps its status.
+      expect(manager.insert).toHaveBeenCalledWith(BookWord, [
+        { bookId: 9, wordId: 'dog#', count: 1 },
+      ]);
+      expect(manager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 9,
+          name: 'A1 vocabulary',
+          level: CefrLevel.A1,
+          wordCount: 2,
+        }),
+      );
+      expect(result).toMatchObject({ id: 9, level: CefrLevel.A1 });
+      manager.createQueryBuilder.mockImplementation(() => insertBuilder);
+    });
+
+    it('removes the list for no level', async () => {
+      manager.findOneBy.mockResolvedValue({ ...list });
+
+      await expect(service.setLevel(userId, null)).resolves.toBeNull();
+
+      const [userWords] = manager.query.mock.calls;
+      expect(userWords[1]).toEqual([9, 5]);
+      expect(manager.delete).toHaveBeenCalledWith(Book, { id: 9 });
+      expect(insertBuilder.update).toHaveBeenCalledWith(User);
+    });
+
+    it('only records the answer when skipping without a list', async () => {
+      manager.findOneBy.mockResolvedValue(null);
+
+      await expect(service.setLevel(userId, null)).resolves.toBeNull();
+
+      expect(insertBuilder.update).toHaveBeenCalledWith(User);
+      expect(manager.query).not.toHaveBeenCalled();
+      expect(manager.delete).not.toHaveBeenCalled();
     });
   });
 });

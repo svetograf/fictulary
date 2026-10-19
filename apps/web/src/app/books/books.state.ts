@@ -9,6 +9,7 @@ import {
   BookSummary,
   BookWordsPage,
   BOOK_TOP_WORDS_LIMIT,
+  CefrLevel,
   DictionaryWord,
   UploadedBook,
   WordCount,
@@ -41,6 +42,9 @@ import {
   LoadBooksFail,
   LoadBooksSuccess,
   ResetUpload,
+  SetLevel,
+  SetLevelFail,
+  SetLevelSuccess,
   UploadFile,
   UploadFileFail,
   UploadFileProgress,
@@ -89,6 +93,11 @@ export interface BooksStateModel {
     loading: boolean;
     error: string | null;
   };
+  /** Setting the user's knowledge level. */
+  level: {
+    saving: boolean;
+    error: string | null;
+  };
 }
 
 const initialList: BooksStateModel['list'] = {
@@ -123,6 +132,8 @@ const initialReview: BooksStateModel['review'] = {
   error: null,
 };
 
+const initialLevel: BooksStateModel['level'] = { saving: false, error: null };
+
 type Ctx = StateContext<BooksStateModel>;
 
 @State<BooksStateModel>({
@@ -133,6 +144,7 @@ type Ctx = StateContext<BooksStateModel>;
     current: initialCurrent,
     upload: initialUpload,
     review: initialReview,
+    level: initialLevel,
   },
 })
 @Injectable()
@@ -209,6 +221,27 @@ export class BooksState {
   @Selector()
   static reviewError(state: BooksStateModel): string | null {
     return state.review.error;
+  }
+
+  /** The user's knowledge-level word list, if they have one. */
+  @Selector()
+  static levelList(state: BooksStateModel): BookSummary | null {
+    return state.list.books.find((book) => book.level !== null) ?? null;
+  }
+
+  @Selector()
+  static level(state: BooksStateModel): CefrLevel | null {
+    return BooksState.levelList(state)?.level ?? null;
+  }
+
+  @Selector()
+  static levelSaving(state: BooksStateModel): boolean {
+    return state.level.saving;
+  }
+
+  @Selector()
+  static levelError(state: BooksStateModel): string | null {
+    return state.level.error;
   }
 
   @Selector()
@@ -349,6 +382,7 @@ export class BooksState {
       current: initialCurrent,
       upload: initialUpload,
       review: initialReview,
+      level: initialLevel,
     });
   }
 
@@ -514,6 +548,49 @@ export class BooksState {
     ctx.setState(patch({ review: { ...initialReview, error } }));
   }
 
+  @Action(SetLevel, { cancelUncompleted: true })
+  setLevel(ctx: Ctx, { level }: SetLevel) {
+    ctx.setState(patch({ level: { saving: true, error: null } }));
+    return this.http.put<BookSummary | null>('/api/level', { level }).pipe(
+      // An empty body (no list) comes back as null.
+      mergeMap((list) => ctx.dispatch(new SetLevelSuccess(list ?? null))),
+      catchError((error: HttpErrorResponse) =>
+        ctx.dispatch(new SetLevelFail(httpErrorMessage(error))),
+      ),
+    );
+  }
+
+  @Action(SetLevelSuccess)
+  setLevelSuccess(ctx: Ctx, { list }: SetLevelSuccess) {
+    const { list: shown, current } = ctx.getState();
+    const { books } = shown;
+    // A changed list keeps its place; a new one goes first, as the newest.
+    const changed = list !== null && books.some((book) => book.id === list.id);
+    ctx.setState(
+      patch({
+        level: initialLevel,
+        list: patch({
+          books: changed
+            ? books.map((book) => (book.id === list.id ? list : book))
+            : [
+                ...(list ? [list] : []),
+                ...books.filter((book) => book.level === null),
+              ],
+        }),
+      }),
+    );
+    // The open list has other words to learn now.
+    if (list && current.book?.id === list.id) {
+      return ctx.dispatch(new LoadBook(list.id));
+    }
+    return undefined;
+  }
+
+  @Action(SetLevelFail)
+  setLevelFail(ctx: Ctx, { error }: SetLevelFail) {
+    ctx.setState(patch({ level: { saving: false, error } }));
+  }
+
   @Action(ResetUpload)
   resetUpload(ctx: Ctx) {
     ctx.setState(patch({ upload: initialUpload, review: initialReview }));
@@ -522,7 +599,7 @@ export class BooksState {
 
 function toSummary(book: BookDetails): BookSummary {
   const { id, name, description, wordCount, uniqueWordCount } = book;
-  const { createdAt } = book;
+  const { createdAt, level } = book;
   return {
     id,
     name,
@@ -530,6 +607,7 @@ function toSummary(book: BookDetails): BookSummary {
     wordCount,
     uniqueWordCount,
     createdAt,
+    level,
   };
 }
 

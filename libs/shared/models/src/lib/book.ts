@@ -7,6 +7,16 @@ export const BOOK_TOP_WORDS_LIMIT = 100;
 /** Largest page of a book's words to learn. */
 export const BOOK_WORDS_MAX_PAGE_SIZE = 100;
 
+/** CEFR levels a user can say they know, lowest first. */
+export enum CefrLevel {
+  A1 = 'A1',
+  A2 = 'A2',
+  B1 = 'B1',
+  B2 = 'B2',
+}
+
+export const CEFR_LEVELS: readonly CefrLevel[] = Object.values(CefrLevel);
+
 /** A word of a book that the reader hasn't learned yet. */
 export interface WordCount {
   /** Word ids are bigints, so they travel as strings. */
@@ -28,6 +38,12 @@ export interface BookSummary {
   uniqueWordCount: number;
   /** ISO 8601 timestamp. */
   createdAt: string;
+  /**
+   * Set for the user's knowledge-level word list ("B1 vocabulary": the
+   * CEFR-J words up to that level), null for an uploaded book. Word lists
+   * are left out of word statistics.
+   */
+  level: CefrLevel | null;
 }
 
 export interface BookDetails extends BookSummary {
@@ -69,4 +85,13 @@ export interface BookWordsPage {
   /** 1-based. */
   page: number;
   pageSize: number;
+}
+
+/**
+ * `PUT /api/level`: replaces the user's knowledge-level word list with the
+ * words up to `level`, or removes it for null. Either way the user has
+ * answered the level prompt. Responds with the list, or null.
+ */
+export interface SetLevelRequest {
+  level: CefrLevel | null;
 }

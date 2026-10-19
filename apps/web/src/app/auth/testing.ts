@@ -16,6 +16,7 @@ export const ada = {
   name: 'Ada',
   email: 'ada@example.com',
   createdAt: '2026-09-01T10:00:00.000Z',
+  levelPrompted: true,
 };
 
 export const authResponse = (token = fakeJwt()): AuthResponse => ({

@@ -19,6 +19,29 @@
         </ion-card-content>
       </ion-card>
 
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>English level</ion-card-title>
+          <ion-card-subtitle>
+            @if (level(); as current) {
+              The words up to {{ current }} are known in your dictionary.
+            } @else {
+              Add the words up to your level to your dictionary as known.
+            }
+          </ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <app-level-picker
+            [level]="level()"
+            [submitLabel]="level() ? 'Change level' : 'Add words'"
+            [noneLabel]="level() ? 'Remove level' : null"
+            [saving]="levelSaving()"
+            [error]="levelError()"
+            (choose)="chooseLevel($event)"
+          />
+        </ion-card-content>
+      </ion-card>
+
       <ion-card class="danger">
         <ion-card-header>
           <ion-card-title>Delete account</ion-card-title>

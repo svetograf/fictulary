@@ -26,8 +26,8 @@ import { AuthService } from './auth/auth.service';
 import { AuthState } from './auth/auth.state';
 import { AUTH_CALLBACK_PATH } from './auth/social-login.service';
 
-/** Pages that handle a missing name themselves or must not be left. */
-const NAME_PROMPT_EXEMPT = ['/welcome', AUTH_CALLBACK_PATH];
+/** Pages that handle onboarding themselves or must not be left. */
+const ONBOARDING_EXEMPT = ['/welcome', AUTH_CALLBACK_PATH];
 
 @Component({
   imports: [
@@ -57,7 +57,7 @@ export class App {
   protected readonly title = 'Fictulary';
   protected readonly signedIn = select(AuthState.isAuthenticated);
   protected readonly user = select(AuthState.user);
-  private readonly needsName = select(AuthState.needsName);
+  private readonly needsOnboarding = select(AuthState.needsOnboarding);
 
   /** The current path, without the query string or fragment. */
   private readonly path = toSignal(
@@ -73,12 +73,13 @@ export class App {
   );
 
   constructor() {
-    // A restored session whose user never picked a name (e.g. closed the
-    // app on the welcome page). Fresh sign-ins are routed by SignInDialog.
+    // A restored session whose user never picked a name or level (e.g.
+    // closed the app on the welcome page). Fresh sign-ins are routed by
+    // SignInDialog.
     effect(() => {
       const url = this.router.url;
       const path = url.split(/[?#]/)[0];
-      if (this.needsName() && !NAME_PROMPT_EXEMPT.includes(path)) {
+      if (this.needsOnboarding() && !ONBOARDING_EXEMPT.includes(path)) {
         this.nav.navigateRoot(['/welcome'], {
           queryParams: { returnUrl: url },
         });

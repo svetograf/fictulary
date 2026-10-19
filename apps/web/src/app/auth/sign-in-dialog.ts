@@ -70,7 +70,7 @@ export class SignInDialog {
   protected readonly submitting = select(AuthState.submitting);
   protected readonly error = select(AuthState.error);
   private readonly signedIn = select(AuthState.isAuthenticated);
-  private readonly needsName = select(AuthState.needsName);
+  private readonly needsOnboarding = select(AuthState.needsOnboarding);
 
   /**
    * Which optional sign-ins the API offers: Apple (when configured) and dev
@@ -107,9 +107,9 @@ export class SignInDialog {
       void this.modals.dismiss();
       // Right away, as the root, so Back doesn't return to the landing page.
       // Navigating only once the dialog has faded out would let App's own
-      // name prompt (for restored sessions) redirect first, with the wrong
+      // onboarding redirect (for restored sessions) go first, with the wrong
       // return URL; this later navigation replaces that one.
-      if (this.needsName()) {
+      if (this.needsOnboarding()) {
         this.nav.navigateRoot(['/welcome'], { queryParams: { returnUrl } });
       } else {
         this.nav.navigateRoot(returnUrl);
@@ -147,7 +147,7 @@ export function injectSignInDialog(): (data: SignInDialogData) => void {
     void modals
       .create({
         component: SignInDialog,
-        cssClass: desktop ? 'sign-in-dialog' : 'sign-in-sheet',
+        cssClass: desktop ? 'form-dialog' : 'form-sheet',
         ...(!desktop && { breakpoints: [0, 1], initialBreakpoint: 1 }),
         injector: Injector.create({
           providers: [{ provide: SIGN_IN_DIALOG_DATA, useValue: data }],

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { AlertController, ModalController } from '@ionic/angular';
 import { provideRouter } from '@angular/router';
-import { BookSummary } from '@fictulary/shared/models';
+import { BookSummary, CefrLevel } from '@fictulary/shared/models';
 import { Store, provideStore } from '@ngxs/store';
 import { SignInSuccess, SignOut } from '../auth/auth.actions';
 import { AuthState } from '../auth/auth.state';
@@ -9,6 +9,7 @@ import { ariaLabel } from '../shared/ionic-testing';
 import { authResponse } from '../auth/testing';
 import { LoadBooksFail, LoadBooksSuccess } from './books.actions';
 import { BookListPage } from './book-list-page';
+import { LevelDialog } from './level-dialog';
 import { BooksService } from './books.service';
 import { BooksState } from './books.state';
 
@@ -19,6 +20,7 @@ const book: BookSummary = {
   wordCount: 140786,
   uniqueWordCount: 7084,
   createdAt: '2026-09-01T10:00:00.000Z',
+  level: null,
 };
 
 describe('BookListPage', () => {
@@ -123,6 +125,51 @@ describe('BookListPage', () => {
     expect(link.href).toBe('/book/5');
     expect(link.textContent).toContain('A Tale of Two Cities');
     expect(link.textContent).toContain('140,786 words');
+  });
+
+  describe('knowledge level', () => {
+    const list: BookSummary = {
+      ...book,
+      id: 9,
+      name: 'B1 vocabulary',
+      wordCount: 4169,
+      uniqueWordCount: 4169,
+      level: CefrLevel.B1,
+    };
+    const setLevelButton = (element: HTMLElement) =>
+      [...element.querySelectorAll('ion-button')].find((b) =>
+        b.textContent?.includes('Set your level'),
+      );
+
+    it('shows the word list apart from books', async () => {
+      const fixture = await render();
+      TestBed.inject(Store).dispatch(new LoadBooksSuccess([list, book]));
+      await fixture.whenStable();
+      const element: HTMLElement = fixture.nativeElement;
+
+      const [levelRow, bookRow] = element.querySelectorAll('.row');
+      expect(levelRow.classList).toContain('level');
+      expect(bookRow.classList).not.toContain('level');
+      expect(levelRow.querySelector('.details')?.textContent?.trim()).toBe(
+        'Word list · 4,169 known words',
+      );
+      expect(levelRow.querySelector('ion-item')?.getAttribute('href')).toBe(
+        '/book/9',
+      );
+      // Set: change it from the list's page instead.
+      expect(setLevelButton(element)).toBeUndefined();
+    });
+
+    it('offers to set the level when there is no word list', async () => {
+      const fixture = await render();
+      TestBed.inject(Store).dispatch(new LoadBooksSuccess([book]));
+      await fixture.whenStable();
+
+      setLevelButton(fixture.nativeElement)?.click();
+      expect(modals.create).toHaveBeenCalledWith(
+        expect.objectContaining({ component: LevelDialog }),
+      );
+    });
   });
 
   it('shows an empty state', async () => {

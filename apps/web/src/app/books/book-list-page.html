@@ -5,10 +5,18 @@
     <div class="page-content">
       <header class="page-header">
         <h2>Books</h2>
-        <ion-button routerLink="/upload">
-          <ion-icon slot="start" name="cloud-upload-outline" />
-          Upload a book
-        </ion-button>
+        <div class="header-actions">
+          @if (!loading() && !error() && !levelList()) {
+            <ion-button fill="outline" color="secondary" (click)="openLevel()">
+              <ion-icon slot="start" name="school-outline" />
+              Set your level
+            </ion-button>
+          }
+          <ion-button routerLink="/upload">
+            <ion-icon slot="start" name="cloud-upload-outline" />
+            Upload a book
+          </ion-button>
+        </div>
       </header>
 
       @if (loading()) {
@@ -28,27 +36,45 @@
       @if (books().length) {
         <ion-list class="books" lines="none">
           @for (book of books(); track book.id) {
-            <div class="row">
+            <div class="row" [class.level]="book.level">
               <ion-item
                 class="book"
                 [routerLink]="['/book', book.id]"
                 [detail]="false"
               >
-                <ion-icon slot="start" name="book-outline" aria-hidden="true" />
-                <ion-label>
-                  <h3 class="title">{{ book.name }}</h3>
-                  <p class="details">
-                    {{ book.wordCount | number }} words ·
-                    {{ book.uniqueWordCount | number }} distinct · Added
-                    {{ book.createdAt | date: 'mediumDate' }}
-                  </p>
-                </ion-label>
+                @if (book.level) {
+                  <ion-icon
+                    slot="start"
+                    name="school-outline"
+                    aria-hidden="true"
+                  />
+                  <ion-label>
+                    <h3 class="title">{{ book.name }}</h3>
+                    <p class="details">
+                      Word list · {{ book.wordCount | number }} known words
+                    </p>
+                  </ion-label>
+                } @else {
+                  <ion-icon
+                    slot="start"
+                    name="book-outline"
+                    aria-hidden="true"
+                  />
+                  <ion-label>
+                    <h3 class="title">{{ book.name }}</h3>
+                    <p class="details">
+                      {{ book.wordCount | number }} words ·
+                      {{ book.uniqueWordCount | number }} distinct · Added
+                      {{ book.createdAt | date: 'mediumDate' }}
+                    </p>
+                  </ion-label>
+                }
               </ion-item>
               <ion-button
                 fill="clear"
                 shape="round"
                 class="delete"
-                title="Delete book"
+                [title]="book.level ? 'Delete word list' : 'Delete book'"
                 [attr.aria-label]="'Delete ' + book.name"
                 [disabled]="deleting().includes(book.id)"
                 (click)="deleteBook(book)"

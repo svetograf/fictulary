@@ -3,6 +3,7 @@ import {
   BookDetails,
   BookSummary,
   BookWordsPage,
+  CefrLevel,
   UploadedBook,
   WORDS_TO_LEARN_STATUSES,
   WordCount,
@@ -13,8 +14,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, EntityManager, In, SelectQueryBuilder } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  In,
+  IsNull,
+  Not,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { UserWord } from '../dictionary/user-word.entity';
+import { levelWords } from '../levels/level-words';
+import { User } from '../users/user.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { BookWord } from './entities/book-word.entity';
 import { Book } from './entities/book.entity';
@@ -145,32 +155,83 @@ export class BooksService {
       if (!book) {
         throw new NotFoundException(`Book ${id} not found`);
       }
-      const bookWordIds = `SELECT "wordId" FROM "book_words" WHERE "bookId" = $1`;
-
-      // The user's words found in none of their other books.
-      await manager.query(
-        `DELETE FROM "user_words" uw
-         WHERE uw."userId" = $2
-           AND uw."wordId" IN (${bookWordIds})
-           AND NOT EXISTS (
-             SELECT 1 FROM "book_words" bw
-             JOIN "books" b ON b."id" = bw."bookId"
-             WHERE bw."wordId" = uw."wordId" AND b."userId" = $2 AND b."id" <> $1
-           )`,
-        [id, userId],
-      );
-      // Words in no other book at all, of any user.
-      await manager.query(
-        `DELETE FROM "words" w
-         WHERE w."id" IN (${bookWordIds})
-           AND NOT EXISTS (
-             SELECT 1 FROM "book_words" bw
-             WHERE bw."wordId" = w."id" AND bw."bookId" <> $1
-           )`,
-        [id],
-      );
+      await unlinkBookWords(manager, userId, id);
       // Its word counts go with it (ON DELETE CASCADE).
       await manager.delete(Book, { id });
+    });
+  }
+
+  /**
+   * Gives the user the word list for their knowledge level: the CEFR-J words
+   * up to `level`, added to their dictionary as KNOWN like a book they've
+   * read. An existing list is changed in place, so its words keep the
+   * statuses the user gave them; words leaving it are removed like a deleted
+   * book's. Null removes the list. Either way the level prompt is answered.
+   */
+  async setLevel(
+    userId: number,
+    level: CefrLevel | null,
+  ): Promise<BookSummary | null> {
+    return this.dataSource.transaction(async (manager) => {
+      // Also locks the user's row, so concurrent level changes take turns.
+      await manager
+        .createQueryBuilder()
+        .update(User)
+        .set({ levelPromptedAt: () => 'COALESCE("levelPromptedAt", now())' })
+        .where('id = :userId', { userId })
+        .execute();
+      const list = await manager.findOneBy(Book, {
+        userId,
+        level: Not(IsNull()),
+      });
+
+      if (level === null) {
+        if (list) {
+          await unlinkBookWords(manager, userId, list.id);
+          await manager.delete(Book, { id: list.id });
+        }
+        return null;
+      }
+
+      const words = levelWords(level);
+      const name = `${level} vocabulary`;
+      if (!list) {
+        const saved = await manager.save(
+          manager.create(Book, {
+            name,
+            description: null,
+            wordCount: words.size,
+            userId,
+            level,
+          }),
+        );
+        await saveListWords(manager, saved, words);
+        return toSummary(saved, words.size);
+      }
+
+      const current = await manager
+        .createQueryBuilder(BookWord, 'bookWord')
+        .innerJoin('bookWord.word', 'word')
+        .select('bookWord.wordId', 'wordId')
+        .addSelect('word.word', 'word')
+        .where('bookWord.bookId = :bookId', { bookId: list.id })
+        .getRawMany<{ wordId: string; word: string }>();
+      const kept = new Set(current.map(({ word }) => word));
+      const removed = current
+        .filter(({ word }) => !words.has(word))
+        .map(({ wordId }) => String(wordId));
+      if (removed.length > 0) {
+        await unlinkBookWords(manager, userId, list.id, removed);
+      }
+      await saveListWords(
+        manager,
+        list,
+        [...words].filter((word) => !kept.has(word)),
+      );
+      const saved = await manager.save(
+        Object.assign(list, { name, level, wordCount: words.size }),
+      );
+      return toSummary(saved, words.size);
     });
   }
 
@@ -293,6 +354,67 @@ export class BooksService {
       throw new NotFoundException(`Book ${bookId} not found`);
     }
   }
+}
+
+/**
+ * Takes words off one of the user's books: those in none of the user's other
+ * books leave their dictionary, with their status, and those in no other
+ * book at all leave the shared word list. All of the book's words by
+ * default, before deleting it; or just `wordIds`.
+ */
+async function unlinkBookWords(
+  manager: EntityManager,
+  userId: number,
+  bookId: number,
+  wordIds?: string[],
+): Promise<void> {
+  // $1 is the book; the word ids, if any, are the last parameter.
+  const bookWordIds = (wordIdsParam: string) =>
+    `SELECT "wordId" FROM "book_words" WHERE "bookId" = $1` +
+    (wordIds ? ` AND "wordId" = ANY(${wordIdsParam}::bigint[])` : '');
+  const withWordIds = (params: unknown[]) =>
+    wordIds ? [...params, wordIds] : params;
+
+  // The user's words found in none of their other books.
+  await manager.query(
+    `DELETE FROM "user_words" uw
+     WHERE uw."userId" = $2
+       AND uw."wordId" IN (${bookWordIds('$3')})
+       AND NOT EXISTS (
+         SELECT 1 FROM "book_words" bw
+         JOIN "books" b ON b."id" = bw."bookId"
+         WHERE bw."wordId" = uw."wordId" AND b."userId" = $2 AND b."id" <> $1
+       )`,
+    withWordIds([bookId, userId]),
+  );
+  // Words in no other book at all, of any user.
+  await manager.query(
+    `DELETE FROM "words" w
+     WHERE w."id" IN (${bookWordIds('$2')})
+       AND NOT EXISTS (
+         SELECT 1 FROM "book_words" bw
+         WHERE bw."wordId" = w."id" AND bw."bookId" <> $1
+       )`,
+    withWordIds([bookId]),
+  );
+  // Deleted words took their links with them; drop the others' links.
+  if (wordIds) {
+    await manager.delete(BookWord, { bookId, wordId: In(wordIds) });
+  }
+}
+
+/**
+ * Adds words to a knowledge-level list, each counted once, and to the
+ * owner's dictionary as KNOWN. No names are looked for: "bill" in a word
+ * list is a word.
+ */
+function saveListWords(
+  manager: EntityManager,
+  list: Book,
+  words: Iterable<string>,
+): Promise<string[]> {
+  const counts = new Map([...words].map((word) => [word, 1]));
+  return saveWordCounts(manager, list, counts, WordStatus.KNOWN, new Set());
 }
 
 /**
@@ -420,5 +542,6 @@ function toSummary(book: Book, uniqueWordCount: number): BookSummary {
     wordCount: book.wordCount,
     uniqueWordCount,
     createdAt: book.createdAt.toISOString(),
+    level: book.level ?? null,
   };
 }

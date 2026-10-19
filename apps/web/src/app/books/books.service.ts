@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { CefrLevel } from '@fictulary/shared/models';
 import { dispatch } from '@ngxs/store';
 import {
   DeleteBook,
@@ -7,6 +8,7 @@ import {
   LoadBook,
   LoadBooks,
   ResetUpload,
+  SetLevel,
   UploadBookPayload,
   UploadFile,
 } from './books.actions';
@@ -24,6 +26,7 @@ export class BooksService {
   private readonly dispatchLoadBookWords = dispatch(LoadBookWords);
   private readonly dispatchUpload = dispatch(UploadFile);
   private readonly dispatchReset = dispatch(ResetUpload);
+  private readonly dispatchSetLevel = dispatch(SetLevel);
 
   loadBooks() {
     return this.dispatchLoadBooks();
@@ -51,5 +54,9 @@ export class BooksService {
 
   reset() {
     return this.dispatchReset();
+  }
+
+  setLevel(level: CefrLevel | null) {
+    return this.dispatchSetLevel(level);
   }
 }
